@@ -1,0 +1,48 @@
+.direct-messages-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    width: 100%;
+}
+
+.plus-icon {
+    cursor: pointer;
+    color: white;
+}
+
+.direct-messages-header .unread-indicator {
+  display: inline-block !important;
+  background-color: green !important;
+  color: white !important;
+  border-radius: 12px !important;
+  padding: 0.2rem 0.6rem !important;
+  margin-left: 0.5rem !important;
+  font-size: 0.8rem !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+.direct-messages-header ul li .unread-indicator {
+  display: inline-block !important;
+  background-color: green !important;
+  /* color: white !important; */
+  border-radius: 12px !important;
+  padding: 0.2rem 0.6rem !important;
+  margin-left: 0.5rem !important;
+  font-size: 0.8rem !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+.selected {
+  border-left: 4px solid blue;
+  /* background-color: #f0f0f0; */
+  font-weight: bold;
+}
+
+.unread {
+  border-left: 4px solid blue;
+  font-weight: bold;
+  background-color: transparent;
+}

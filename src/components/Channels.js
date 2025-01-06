@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, updateDoc, arrayUnion, getDoc, query, orderBy, onSnapshot, writeBatch } from 'firebase/firestore';
 import Modal from 'react-modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCog } from '@fortawesome/free-solid-svg-icons';
@@ -8,24 +8,47 @@ import './Channels.css';
 
 Modal.setAppElement('#root');
 
-const Channels = ({ onChannelSelect, currentUser }) => {
+const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedChannel, onDirectMessageSelect }) => {
   const [channelName, setChannelName] = useState('');
   const [channels, setChannels] = useState([]);
   const [joinedChannels, setJoinedChannels] = useState([]);
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [unreadCounts, setUnreadCounts] = useState({});
+  const [activeChannel, setActiveChannel] = useState(null);
+  const [activeDirectMessage, setActiveDirectMessage] = useState(null);
+  const [directMessages, setDirectMessages] = useState([]);
 
   useEffect(() => {
     if (currentUser && currentUser.id) {
       fetchChannels();
       fetchJoinedChannels();
+      fetchDirectMessages();
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (activeChannel) {
+      const q = query(
+        collection(firestore, `channels/${activeChannel.id}/messages`),
+        orderBy('createdAt')
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const messagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setMessages(messagesData);
+        markMessagesAsRead(messagesData, `channels/${activeChannel.id}/messages`);
+      });
+
+      return () => unsubscribe();
+    }
+  }, [activeChannel]);
 
   const fetchChannels = async () => {
     try {
       const querySnapshot = await getDocs(collection(firestore, 'channels'));
       const channelsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setChannels(channelsData);
+      calculateUnreadCounts(channelsData);
     } catch (error) {
       console.error("Error fetching channels:", error);
     }
@@ -50,6 +73,37 @@ const Channels = ({ onChannelSelect, currentUser }) => {
     } catch (error) {
       console.error("Error fetching joined channels:", error);
     }
+  };
+
+  const calculateUnreadCounts = async (channelsData) => {
+    const counts = {};
+    for (const channel of channelsData) {
+      const q = query(
+        collection(firestore, `channels/${channel.id}/messages`),
+        orderBy('createdAt')
+      );
+      const snapshot = await getDocs(q);
+      const unreadCount = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        return data.readBy && !data.readBy.includes(currentUser.id);
+      }).length;
+      counts[channel.id] = unreadCount;
+    }
+    console.log(counts);
+    setUnreadCounts(counts);
+  };
+
+  const markMessagesAsRead = async (messages, path) => {
+    const batch = writeBatch(firestore);
+    messages.forEach(message => {
+      if (!message.readBy.includes(currentUser.id)) {
+        const messageRef = doc(firestore, path, message.id);
+        batch.update(messageRef, {
+          readBy: arrayUnion(currentUser.id)
+        });
+      }
+    });
+    await batch.commit();
   };
 
   const createChannel = async (e) => {
@@ -95,6 +149,64 @@ const Channels = ({ onChannelSelect, currentUser }) => {
     }
   };
 
+  const handleChannelSelect = (channel) => {
+    setActiveChannel(channel);
+    setActiveDirectMessage(null);
+
+    const q = query(
+      collection(firestore, `channels/${channel.id}/messages`),
+      orderBy('createdAt')
+    );
+    getDocs(q).then(snapshot => {
+      const messagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMessages(messagesData);
+
+      markMessagesAsRead(messagesData, `channels/${channel.id}/messages`);
+    });
+
+    if (typeof onChannelSelect === 'function') {
+      onChannelSelect(channel);
+    }
+  };
+
+  const handleDirectMessageSelect = (directMessage) => {
+    setActiveDirectMessage(directMessage);
+    setActiveChannel(null);
+
+    if (typeof onDirectMessageSelect === 'function') {
+      onDirectMessageSelect(directMessage);
+    }
+  };
+
+  const fetchDirectMessages = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(firestore, 'directMessages'));
+      const directMessagesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setDirectMessages(directMessagesData);
+    } catch (error) {
+      console.error("Error fetching direct messages:", error);
+    }
+  };
+
+//   const sendMessage = async (e) => {
+//     e.preventDefault();
+//     const messageData = {
+//       text: newMessage,
+//       createdAt: new Date(),
+//       senderId: currentUser.id,
+//       senderName: currentUser.name,
+//       readBy: [],
+//     };
+
+//     if (selectedChannel) {
+//       await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages`), messageData);
+//     } else if (selectedUser) {
+//       const messageId = [currentUser.id, selectedUser.id].sort().join('_');
+//       await addDoc(collection(firestore, `directMessages/${messageId}/messages`), messageData);
+//     }
+//     setNewMessage('');
+//   };
+
   return (
     <div>
       <div className="channels-header">
@@ -103,8 +215,26 @@ const Channels = ({ onChannelSelect, currentUser }) => {
       </div>
       <ul>
         {joinedChannels.map(channel => (
-          <li key={channel.id} onClick={() => onChannelSelect(channel)}>
+          <li
+            key={channel.id}
+            onClick={() => handleChannelSelect(channel)}
+            className={`${activeChannel && activeChannel.id === channel.id ? 'selected' : ''} ${unreadCounts[channel.id] > 0 ? 'unread' : ''}`}
+          >
             {channel.name}
+            {unreadCounts[channel.id] > 0 && (
+              <span className="unread-indicator">{unreadCounts[channel.id]}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <ul>
+        {directMessages.map(directMessage => (
+          <li
+            key={directMessage.id}
+            onClick={() => handleDirectMessageSelect(directMessage)}
+            className={`${activeDirectMessage && activeDirectMessage.id === directMessage.id ? 'selected' : ''}`}
+          >
+            {directMessage.name}
           </li>
         ))}
       </ul>

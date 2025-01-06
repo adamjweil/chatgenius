@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, writeBatch } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { auth, firestore } from '../firebase';
 import Channels from './Channels';
@@ -21,6 +21,7 @@ const Messaging = ({ currentUser }) => {
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const messagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setMessages(messagesData);
+        markMessagesAsRead(messagesData, `channels/${selectedChannel.id}/messages`);
       });
 
       return () => unsubscribe();
@@ -29,13 +30,15 @@ const Messaging = ({ currentUser }) => {
 
   useEffect(() => {
     if (selectedUser) {
+      const messageId = [currentUser.id, selectedUser.id].sort().join('_');
       const q = query(
-        collection(firestore, `directMessages/${currentUser.id}_${selectedUser.id}/messages`),
+        collection(firestore, `directMessages/${messageId}/messages`),
         orderBy('createdAt')
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const messagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setMessages(messagesData);
+        markMessagesAsRead(messagesData, `directMessages/${messageId}/messages`);
       });
 
       return () => unsubscribe();
@@ -44,18 +47,19 @@ const Messaging = ({ currentUser }) => {
 
   const sendMessage = async (e) => {
     e.preventDefault();
+    const messageData = {
+      text: newMessage,
+      createdAt: new Date(),
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      readBy: [],
+    };
+
     if (selectedChannel) {
-      await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages`), {
-        text: newMessage,
-        createdAt: new Date(),
-        senderName: currentUser.name
-      });
+      await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages`), messageData);
     } else if (selectedUser) {
-      await addDoc(collection(firestore, `directMessages/${currentUser.id}_${selectedUser.id}/messages`), {
-        text: newMessage,
-        createdAt: new Date(),
-        senderName: currentUser.name
-      });
+      const messageId = [currentUser.id, selectedUser.id].sort().join('_');
+      await addDoc(collection(firestore, `directMessages/${messageId}/messages`), messageData);
     }
     setNewMessage('');
   };
@@ -80,11 +84,36 @@ const Messaging = ({ currentUser }) => {
     setSelectedChannel(null);
   };
 
+  const markMessagesAsRead = async (messages, path) => {
+    const batch = writeBatch(firestore);
+    messages.forEach(message => {
+      if (!message.readBy.includes(currentUser.id)) {
+        const messageRef = doc(firestore, path, message.id);
+        batch.update(messageRef, {
+          readBy: arrayUnion(currentUser.id)
+        });
+      }
+    });
+    await batch.commit();
+  };
+
+  const hasUnreadMessages = (messages) => {
+    return messages.some(message => !message.readBy.includes(currentUser.id));
+  };
+
   return (
     <div className="messaging-container">
       <div className="sidebar">
-        <Channels currentUser={currentUser} onChannelSelect={handleChannelSelect} />
-        <DirectMessages currentUser={currentUser} onUserSelect={handleUserSelect} />
+        <Channels
+          currentUser={currentUser}
+          onChannelSelect={handleChannelSelect}
+          selectedChannel={selectedChannel}
+        />
+        <DirectMessages
+          currentUser={currentUser}
+          onUserSelect={handleUserSelect}
+          selectedUser={selectedUser}
+        />
         <button onClick={handleLogout}>Logout</button>
       </div>
       <div className="chat-area">

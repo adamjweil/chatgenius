@@ -41,4 +41,36 @@ ul {
 
 li {
   margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+li:hover {
+  background-color: #f0f0f0;
+}
+
+/* Style for the selected channel */
+.selected {
+  /* background-color: #d0e7ff; Light blue background */
+  font-weight: bold; /* Bold text */
+  border-left: 4px solid #007bff; /* Blue border on the left */
+  padding-left: 8px; /* Padding to align text after border */
+}
+
+.unread-indicator {
+  background-color: green;
+  color: white;
+  border-radius: 12px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-align: center;
+  margin-left: 0.5rem;
+}
+
+.selected,
+.unread {
+  border-left: 4px solid blue;
+  background-color: #f0f0f0;
+  font-weight: bold;
 } 
