@@ -72,4 +72,11 @@
 
 .message-form button:hover {
   background-color: #3a0d3a;
+}
+
+.selected {
+  /* background-color: #e0e0e0; Light gray background */
+  font-weight: bold; /* Bold text */
+  /* font-size: 50px; */
+  border-left: 4px solid #007bff; /* Blue border on the left */
 } 
