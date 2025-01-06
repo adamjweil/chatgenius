@@ -89,8 +89,6 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
       }).length;
       counts[channel.id] = unreadCount;
     }
-    console.log(counts);
-    setUnreadCounts(counts);
   };
 
   const markMessagesAsRead = async (messages, path) => {
@@ -152,26 +150,16 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
   const handleChannelSelect = (channel) => {
     setActiveChannel(channel);
     setActiveDirectMessage(null);
-
-    const q = query(
-      collection(firestore, `channels/${channel.id}/messages`),
-      orderBy('createdAt')
-    );
-    getDocs(q).then(snapshot => {
-      const messagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMessages(messagesData);
-
-      markMessagesAsRead(messagesData, `channels/${channel.id}/messages`);
-    });
-
     if (typeof onChannelSelect === 'function') {
       onChannelSelect(channel);
     }
   };
 
   const handleDirectMessageSelect = (directMessage) => {
+    console.log('Direct Message Selected:', directMessage);
     setActiveDirectMessage(directMessage);
-    setActiveChannel(null);
+    setActiveChannel(null); // Clear channel selection
+    console.log('Active Channel after DM select:', activeChannel);
 
     if (typeof onDirectMessageSelect === 'function') {
       onDirectMessageSelect(directMessage);
@@ -218,9 +206,9 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
           <li
             key={channel.id}
             onClick={() => handleChannelSelect(channel)}
-            className={`${activeChannel && activeChannel.id === channel.id ? 'selected' : ''} ${unreadCounts[channel.id] > 0 ? 'unread' : ''}`}
+            className={`${activeChannel && activeChannel.id === channel.id ? 'selected' : ''}`}
           >
-            {channel.name}
+             #{channel.name}
             {unreadCounts[channel.id] > 0 && (
               <span className="unread-indicator">{unreadCounts[channel.id]}</span>
             )}

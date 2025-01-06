@@ -61,7 +61,7 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
   return (
     <div>
       <div className="direct-messages-header">
-        <h2>Direct Messages</h2>
+        <h2 className="direct-messages-title">Direct Messages</h2>
         <FontAwesomeIcon icon={faPlus} onClick={() => setModalIsOpen(true)} className="plus-icon" />
       </div>
       <ul>
@@ -69,7 +69,7 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
           <li
             key={user.id}
             onClick={() => onUserSelect(user)}
-            className={`${selectedUser && selectedUser.id === user.id ? 'selected' : ''} ${unreadCounts[user.id] > 0 ? 'unread' : ''}`}
+            className={`${selectedUser && selectedUser.id === user.id ? 'selected' : ''}`}
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
           >
             <span>{user.name}</span>

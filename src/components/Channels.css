@@ -40,6 +40,7 @@ ul {
 }
 
 li {
+    padding-left: 10px;
   margin-bottom: 0.5rem;
   cursor: pointer;
   transition: background-color 0.3s;
@@ -50,12 +51,11 @@ li:hover {
 }
 
 /* Style for the selected channel */
-.selected {
-  /* background-color: #d0e7ff; Light blue background */
-  font-weight: bold; /* Bold text */
-  border-left: 4px solid #007bff; /* Blue border on the left */
-  padding-left: 8px; /* Padding to align text after border */
-}
+/* .selected {
+  font-weight: bold; 
+  border-left: 4px solid #007bff; 
+  padding-left: 8px; 
+} */
 
 .unread-indicator {
   background-color: green;
@@ -68,9 +68,14 @@ li:hover {
   margin-left: 0.5rem;
 }
 
-.selected,
-.unread {
+.selected {
   border-left: 4px solid blue;
-  background-color: #f0f0f0;
+  /* background-color: #f0f0f0; */
   font-weight: bold;
 } 
+
+.unread {
+    border-left: 4px solid blue;
+    /* background-color: #f0f0f0; */
+    font-weight: bold;
+  } 
