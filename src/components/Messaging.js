@@ -5,28 +5,37 @@ import { auth, firestore } from '../firebase';
 import Channels from './Channels';
 import DirectMessages from './DirectMessages';
 import './Messaging.css';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { format } from 'date-fns';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPaperclip } from '@fortawesome/free-solid-svg-icons';
 
 const Messaging = ({ currentUser }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [file, setFile] = useState(null);
+  const [activeChannel, setActiveChannel] = useState(null);
 
   useEffect(() => {
-    if (selectedChannel) {
+    if (activeChannel) {
       const q = query(
-        collection(firestore, `channels/${selectedChannel.id}/messages`),
+        collection(firestore, `channels/${activeChannel.id}/messages`),
         orderBy('createdAt')
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const messagesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setMessages(messagesData);
-        markMessagesAsRead(messagesData, `channels/${selectedChannel.id}/messages`);
+        markMessagesAsRead(messagesData, `channels/${activeChannel.id}/messages`);
       });
 
       return () => unsubscribe();
     }
-  }, [selectedChannel]);
+  }, [activeChannel]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -36,7 +45,11 @@ const Messaging = ({ currentUser }) => {
         orderBy('createdAt')
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const messagesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt.toDate(),
+        }));
         setMessages(messagesData);
         markMessagesAsRead(messagesData, `directMessages/${messageId}/messages`);
       });
@@ -45,6 +58,10 @@ const Messaging = ({ currentUser }) => {
     }
   }, [selectedUser, currentUser.id]);
 
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
+
   const sendMessage = async (e) => {
     e.preventDefault();
     const messageData = {
@@ -52,8 +69,18 @@ const Messaging = ({ currentUser }) => {
       createdAt: new Date(),
       senderId: currentUser.id,
       senderName: currentUser.name,
-      readBy: [],
+      readBy: [currentUser.id],
     };
+
+    if (file) {
+      const storage = getStorage();
+      const storageRef = ref(storage, `uploads/${file.name}`);
+      await uploadBytes(storageRef, file);
+      const fileURL = await getDownloadURL(storageRef);
+      messageData.fileURL = fileURL;
+      messageData.fileName = file.name;
+      setFile(null);
+    }
 
     if (selectedChannel) {
       await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages`), messageData);
@@ -80,8 +107,10 @@ const Messaging = ({ currentUser }) => {
   };
 
   const handleUserSelect = (user) => {
+    console.log("User selected:", user);
     setSelectedUser(user);
     setSelectedChannel(null);
+    console.log("Selected Channel after user select:", selectedChannel);
   };
 
   const markMessagesAsRead = async (messages, path) => {
@@ -114,31 +143,58 @@ const Messaging = ({ currentUser }) => {
           onUserSelect={handleUserSelect}
           selectedUser={selectedUser}
         />
-        <button onClick={handleLogout}>Logout</button>
+        <button onClick={handleLogout} className="logout-button">Logout</button>
       </div>
       <div className="chat-area">
         {(selectedChannel || selectedUser) && (
           <div className="chat-header">
             <h2>
-              {selectedChannel ? `Channel: ${selectedChannel.name}` : `Chat with ${selectedUser.name}`}
+              {selectedChannel ? `#${selectedChannel.name}` : `Chat with ${selectedUser.name}`}
             </h2>
           </div>
         )}
         <div className="messages">
           {messages.map(message => (
-            <div key={message.id} className="message">
-              <strong>{message.senderName}:</strong> {message.text}
+            <div
+              key={message.id}
+              className={`message ${message.senderId === currentUser.id ? 'my-message' : 'other-message'}`}
+            >
+              <div>
+                <strong>{message.senderName}:</strong> {message.text}
+                {message.fileURL && (
+                  <div>
+                    <a href={message.fileURL} target="_blank" rel="noopener noreferrer">
+                      {message.fileName}
+                    </a>
+                  </div>
+                )}
+              </div>
+              <div className={`message-info ${message.senderId === currentUser.id ? 'my-info' : 'other-info'}`}>
+                Sent by {message.senderName} at {format(new Date(message.createdAt), 'p, MMM d')}
+              </div>
             </div>
           ))}
         </div>
         {(selectedChannel || selectedUser) && (
           <form onSubmit={sendMessage} className="message-form">
-            <input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message"
-            />
-            <button type="submit">Send</button>
+            <div className="input-container">
+              <label htmlFor="file-input" className="file-icon">
+                <FontAwesomeIcon icon={faPaperclip} />
+              </label>
+              <input
+                id="file-input"
+                type="file"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+              <input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type a message"
+                className="text-input"
+              />
+              <button type="submit" className="send-button">Send</button>
+            </div>
           </form>
         )}
       </div>

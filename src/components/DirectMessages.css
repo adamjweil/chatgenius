@@ -1,14 +1,31 @@
+.direct-messages-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0;
+}
+
 .direct-messages-header {
+    /* display: block;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    width: 100%;
+    box-sizing: border-box; */
+
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 1rem;
-    width: 100%;
 }
 
 .plus-icon {
     cursor: pointer;
-    color: white;
+    font-size: 1.5rem;
+    transition: color 0.3s ease;
+}
+
+.plus-icon:hover {
+    color: #ccc;
 }
 
 .direct-messages-header .unread-indicator {
