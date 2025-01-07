@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, writeBatch, updateDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { auth, firestore } from '../firebase';
 import Channels from './Channels';
@@ -17,25 +17,37 @@ const Messaging = ({ currentUser }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [file, setFile] = useState(null);
   const [activeChannel, setActiveChannel] = useState(null);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
+  const [status, setStatus] = useState(currentUser.status || '');
 
   useEffect(() => {
-    if (activeChannel) {
+    console.log('Current User:', currentUser);
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (selectedChannel) {
       const q = query(
-        collection(firestore, `channels/${activeChannel.id}/messages`),
+        collection(firestore, `channels/${selectedChannel.id}/messages`),
         orderBy('createdAt')
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const messagesData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
+          };
+        });
         setMessages(messagesData);
-        markMessagesAsRead(messagesData, `channels/${activeChannel.id}/messages`);
       });
 
       return () => unsubscribe();
+    } else {
+      setMessages([]); // Clear messages if no channel is selected
     }
-  }, [activeChannel]);
+  }, [selectedChannel]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -57,6 +69,18 @@ const Messaging = ({ currentUser }) => {
       return () => unsubscribe();
     }
   }, [selectedUser, currentUser.id]);
+
+  useEffect(() => {
+    const userRef = doc(firestore, 'users', currentUser.id);
+    const unsubscribe = onSnapshot(userRef, (doc) => {
+      if (doc.exists()) {
+        const userData = doc.data();
+        setStatus(userData.status);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser.id]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -88,6 +112,7 @@ const Messaging = ({ currentUser }) => {
       const messageId = [currentUser.id, selectedUser.id].sort().join('_');
       await addDoc(collection(firestore, `directMessages/${messageId}/messages`), messageData);
     }
+    console.log('Sending message:', messageData);
     setNewMessage('');
   };
 
@@ -130,9 +155,23 @@ const Messaging = ({ currentUser }) => {
     return messages.some(message => !message.readBy.includes(currentUser.id));
   };
 
+  const handleStatusChange = () => {
+    const userRef = doc(firestore, 'users', currentUser.id);
+    updateDoc(userRef, { status: newStatus })
+      .then(() => {
+        setStatus(newStatus);
+        setStatusModalOpen(false);
+        setNewStatus('');
+      })
+      .catch((error) => {
+        console.error('Error updating status:', error);
+      });
+  };
+
   return (
     <div className="messaging-container">
       <div className="sidebar">
+        
         <Channels
           currentUser={currentUser}
           onChannelSelect={handleChannelSelect}
@@ -143,6 +182,17 @@ const Messaging = ({ currentUser }) => {
           onUserSelect={handleUserSelect}
           selectedUser={selectedUser}
         />
+
+    <div className="user-info">
+          <strong>{currentUser.name}</strong>
+          <div className="status">
+            <span>{status || "Set your status"}</span>
+            <button onClick={() => setStatusModalOpen(true)}>
+              {status ? "Change Status" : "Set Status"}
+            </button>
+          </div>
+        </div>
+        
         <button onClick={handleLogout} className="logout-button">Logout</button>
       </div>
       <div className="chat-area">
@@ -198,6 +248,17 @@ const Messaging = ({ currentUser }) => {
           </form>
         )}
       </div>
+      {statusModalOpen && (
+        <div className="status-modal">
+          <input
+            type="text"
+            value={newStatus}
+            onChange={(e) => setNewStatus(e.target.value)}
+            placeholder="Enter your status"
+          />
+          <button onClick={handleStatusChange}>Save</button>
+        </div>
+      )}
     </div>
   );
 };

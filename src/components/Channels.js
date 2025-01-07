@@ -18,6 +18,7 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
   const [activeChannel, setActiveChannel] = useState(null);
   const [activeDirectMessage, setActiveDirectMessage] = useState(null);
   const [directMessages, setDirectMessages] = useState([]);
+  const [selectedChannel, setSelectedChannel] = useState(null);
 
   useEffect(() => {
     if (currentUser && currentUser.id) {
@@ -42,6 +43,24 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
       return () => unsubscribe();
     }
   }, [activeChannel]);
+
+  useEffect(() => {
+    if (selectedChannel) {
+      const q = query(
+        collection(firestore, `channels/${selectedChannel.id}/messages`),
+        orderBy('createdAt')
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const messagesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setMessages(messagesData);
+      });
+
+      return () => unsubscribe();
+    }
+  }, [selectedChannel]);
 
   const fetchChannels = async () => {
     try {
@@ -149,9 +168,13 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
 
   const handleChannelSelect = (channel) => {
     setActiveChannel(channel);
+    setSelectedChannel(channel);
+    setMessages([]);
+
     setActiveDirectMessage(null);
     if (typeof onChannelSelect === 'function') {
       onChannelSelect(channel);
+      setActiveDirectMessage(null);
     }
   };
 
