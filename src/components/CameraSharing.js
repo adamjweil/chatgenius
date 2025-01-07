@@ -12,22 +12,27 @@ const CameraSharing = ({ currentUser, selectedChannel }) => {
 
     const unsubscribe = onSnapshot(channelRef, (doc) => {
       const data = doc.data();
-      setCurrentStreamer(data.currentStreamer);
-      console.log('Current streamer:', data.currentStreamer);
+      if (data) {
+        setCurrentStreamer(data.currentStreamer);
+        console.log('Current streamer:', data.currentStreamer);
 
-      if (data.currentStreamer && data.currentStreamer !== currentUser.id) {
-        navigator.mediaDevices.getUserMedia({ video: true })
-          .then(stream => {
-            videoRef.current.srcObject = stream;
-            videoRef.current.onloadedmetadata = () => {
-              videoRef.current.play().catch(error => console.error('Error playing video:', error));
-            };
-          })
-          .catch(error => console.error('Error accessing camera:', error));
-      } else if (!data.currentStreamer) {
-        if (videoRef.current) {
-          videoRef.current.srcObject = null;
+        if (data.currentStreamer && data.currentStreamer !== currentUser.id) {
+          navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+              videoRef.current.srcObject = stream;
+              videoRef.current.onloadedmetadata = () => {
+                videoRef.current.play().catch(error => console.error('Error playing video:', error));
+              };
+            })
+            .catch(error => console.error('Error accessing camera:', error));
+        } else if (!data.currentStreamer) {
+          if (videoRef.current) {
+            videoRef.current.srcObject = null;
+          }
         }
+      } else {
+        console.error('Channel does not exist');
+        setCurrentStreamer(null);
       }
     });
 
@@ -78,8 +83,26 @@ const CameraSharing = ({ currentUser, selectedChannel }) => {
     }
   };
 
+  const stopAllStreams = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject;
+      const tracks = stream.getTracks();
+      tracks.forEach(track => {
+        track.stop();
+        console.log('Stopped track:', track);
+      });
+    }
+  };
+
+  stopAllStreams(); // Uncomment this line to run the function once
+
   return (
     <div className="camera-sharing">
+      {currentStreamer === currentUser.id && (
+        <div className="sharing-indicator">
+          You are sharing your camera
+        </div>
+      )}
       {currentStreamer === currentUser.id ? (
         <button onClick={stopSharing}>Stop Sharing</button>
       ) : (

@@ -19,6 +19,7 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
   const [activeDirectMessage, setActiveDirectMessage] = useState(null);
   const [directMessages, setDirectMessages] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
+  const [activeShares, setActiveShares] = useState({});
 
   useEffect(() => {
     if (currentUser && currentUser.id) {
@@ -61,6 +62,26 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
       return () => unsubscribe();
     }
   }, [selectedChannel]);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(firestore, 'channels'), (snapshot) => {
+      const channelsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setChannels(channelsData);
+
+      const shares = {};
+      channelsData.forEach(channel => {
+        if (channel.currentStreamer) {
+          shares[channel.id] = true;
+        }
+      });
+      setActiveShares(shares);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const fetchChannels = async () => {
     try {
@@ -174,7 +195,6 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
     setActiveDirectMessage(null);
     if (typeof onChannelSelect === 'function') {
       onChannelSelect(channel);
-      setActiveDirectMessage(null);
     }
   };
 
@@ -231,7 +251,8 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
             onClick={() => handleChannelSelect(channel)}
             className={`${activeChannel && activeChannel.id === channel.id ? 'selected' : ''}`}
           >
-             #{channel.name}
+            #{channel.name}
+            {activeShares[channel.id] && <span className="active-share-indicator">•</span>}
             {unreadCounts[channel.id] > 0 && (
               <span className="unread-indicator">{unreadCounts[channel.id]}</span>
             )}

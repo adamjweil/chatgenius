@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import './Login.css'; // Import the CSS file for styling
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate(); // Use the useNavigate hook
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      navigate('/')
       // Redirect to the main app
     } catch (error) {
       console.error("Error logging in: ", error);
+      alert("Login failed. Please check your credentials.");
     }
   };
 
