@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, writeBatch, updateDoc, getDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { auth, firestore } from '../firebase';
 import Channels from './Channels';
@@ -8,7 +8,7 @@ import './Messaging.css';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPaperclip } from '@fortawesome/free-solid-svg-icons';
+import { faPaperclip, faHeart } from '@fortawesome/free-solid-svg-icons';
 
 const Messaging = ({ currentUser }) => {
   const [messages, setMessages] = useState([]);
@@ -16,15 +16,31 @@ const Messaging = ({ currentUser }) => {
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [file, setFile] = useState(null);
-  const [activeChannel, setActiveChannel] = useState(null);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [status, setStatus] = useState(currentUser.status || '');
   const [expandedThreads, setExpandedThreads] = useState({});
   const [showReplyInput, setShowReplyInput] = useState({});
+  const [userNames, setUserNames] = useState({});
 
   useEffect(() => {
-    console.log('Current User:', currentUser);
+    const fetchUserData = async () => {
+      if (!currentUser.name) {
+        try {
+          const userRef = doc(firestore, 'users', currentUser.id);
+          const userDoc = await getDoc(userRef);
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            currentUser.name = userData.name;
+            setStatus(userData.status || '');
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      }
+    };
+
+    fetchUserData();
   }, [currentUser]);
 
   useEffect(() => {
@@ -43,6 +59,7 @@ const Messaging = ({ currentUser }) => {
           };
         });
         setMessages(messagesData);
+        markMessagesAsRead(messagesData, `channels/${selectedChannel.id}/messages`);
       });
 
       return () => unsubscribe();
@@ -62,6 +79,7 @@ const Messaging = ({ currentUser }) => {
           };
         });
         setMessages(messagesData);
+        markMessagesAsRead(messagesData, `directMessages/${messageId}/messages`);
       });
 
       return () => unsubscribe();
@@ -70,30 +88,24 @@ const Messaging = ({ currentUser }) => {
     }
   }, [selectedChannel, selectedUser]);
 
-  useEffect(() => {
-    const userRef = doc(firestore, 'users', currentUser.id);
-    const unsubscribe = onSnapshot(userRef, (doc) => {
-      if (doc.exists()) {
-        const userData = doc.data();
-        setStatus(userData.status);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [currentUser.id]);
-
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
   const sendMessage = async (e) => {
     e.preventDefault();
+    if (!currentUser.name) {
+      console.error('Sender name is missing');
+      return;
+    }
+
     const messageData = {
       text: newMessage,
       createdAt: new Date(),
       senderId: currentUser.id,
       senderName: currentUser.name,
       readBy: [currentUser.id],
+      likes: [], // Initialize likes as an empty array
     };
 
     if (file) {
@@ -112,8 +124,30 @@ const Messaging = ({ currentUser }) => {
       const messageId = [currentUser.id, selectedUser.id].sort().join('_');
       await addDoc(collection(firestore, `directMessages/${messageId}/messages`), messageData);
     }
-    console.log('Sending message:', messageData);
     setNewMessage('');
+  };
+
+  const handleLike = async (messageId, path) => {
+    const messageRef = doc(firestore, path, messageId);
+    await updateDoc(messageRef, {
+      likes: arrayUnion(currentUser.id)
+    });
+  };
+
+  const fetchUserNames = async (userIds) => {
+    const names = {};
+    for (const userId of userIds) {
+      if (!userNames[userId]) {
+        const userRef = doc(firestore, 'users', userId);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          names[userId] = userDoc.data().name;
+        }
+      } else {
+        names[userId] = userNames[userId];
+      }
+    }
+    setUserNames(prev => ({ ...prev, ...names }));
   };
 
   const handleLogout = async () => {
@@ -126,16 +160,13 @@ const Messaging = ({ currentUser }) => {
   };
 
   const handleChannelSelect = (channel) => {
-    console.log("Channel selected:", channel);
     setSelectedChannel(channel);
     setSelectedUser(null);
   };
 
   const handleUserSelect = (user) => {
-    console.log("User selected:", user);
     setSelectedUser(user);
     setSelectedChannel(null);
-    console.log("Selected Channel after user select:", selectedChannel);
   };
 
   const markMessagesAsRead = async (messages, path) => {
@@ -149,10 +180,6 @@ const Messaging = ({ currentUser }) => {
       }
     });
     await batch.commit();
-  };
-
-  const hasUnreadMessages = (messages) => {
-    return messages.some(message => !message.readBy.includes(currentUser.id));
   };
 
   const handleStatusChange = () => {
@@ -196,7 +223,6 @@ const Messaging = ({ currentUser }) => {
   return (
     <div className="messaging-container">
       <div className="sidebar">
-        
         <Channels
           currentUser={currentUser}
           onChannelSelect={handleChannelSelect}
@@ -207,8 +233,7 @@ const Messaging = ({ currentUser }) => {
           onUserSelect={handleUserSelect}
           selectedUser={selectedUser}
         />
-
-    <div className="user-info">
+        <div className="user-info">
           <strong>{currentUser.name}</strong>
           <div className="status">
             <span>{status || "Set your status"}</span>
@@ -217,7 +242,6 @@ const Messaging = ({ currentUser }) => {
             </button>
           </div>
         </div>
-        
         <button onClick={handleLogout} className="logout-button">Logout</button>
       </div>
       <div className="chat-area">
@@ -235,7 +259,7 @@ const Messaging = ({ currentUser }) => {
               className={`message ${message.senderId === currentUser.id ? 'my-message' : 'other-message'}`}
             >
               <div>
-                <strong>{message.senderName}:</strong> {message.text}
+                {message.text}
                 {message.fileURL && (
                   <div>
                     <a href={message.fileURL} target="_blank" rel="noopener noreferrer">
@@ -246,6 +270,20 @@ const Messaging = ({ currentUser }) => {
               </div>
               <div className={`message-info ${message.senderId === currentUser.id ? 'my-info' : 'other-info'}`}>
                 Sent by {message.senderName} at {format(new Date(message.createdAt), 'p, MMM d')}
+              </div>
+              <div className="like-section">
+                <button onClick={() => handleLike(message.id, selectedChannel ? `channels/${selectedChannel.id}/messages` : `directMessages/${[currentUser.id, selectedUser.id].sort().join('_')}/messages`)}>
+                  <FontAwesomeIcon icon={faHeart} />
+                </button>
+                {message.likes && message.likes.map((like, index) => (
+                  <span
+                    key={index}
+                    onMouseEnter={() => fetchUserNames(message.likes)}
+                    title={message.likes.map(userId => userNames[userId]).join(', ')}
+                  >
+                    <FontAwesomeIcon icon={faHeart} style={{ color: 'red', marginLeft: '4px' }} />
+                  </span>
+                ))}
               </div>
               {selectedChannel && (
                 <RepliesButton
