@@ -4,12 +4,14 @@ import { firestore } from '../firebase';
 import Modal from 'react-modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { Tooltip } from 'react-tooltip';
 
 const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
   const [users, setUsers] = useState([]);
   const [messageUsers, setMessageUsers] = useState([]);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [visibleStatus, setVisibleStatus] = useState({});
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -36,6 +38,10 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
     fetchMessageUsers();
   }, [currentUser, users]);
 
+//   useEffect(() => {
+//     console.log('Message Users:', messageUsers);
+//   }, [messageUsers]);
+
   const calculateUnreadCounts = async (messageUsersData) => {
     const counts = {};
     for (const user of messageUsersData) {
@@ -58,6 +64,13 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
     setModalIsOpen(false);
   };
 
+  const toggleStatusVisibility = (userId) => {
+    setVisibleStatus(prev => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }));
+  };
+
   return (
     <div>
       <div className="direct-messages-header">
@@ -73,6 +86,22 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
           >
             <span>{user.name}</span>
+            {user.status && (
+              <>
+                <span
+                  className="status-indicator"
+                  onClick={() => toggleStatusVisibility(user.id)}
+                  style={{ marginLeft: '8px', color: 'green', cursor: 'pointer' }}
+                >
+                  ●
+                </span>
+                {visibleStatus[user.id] && (
+                  <span className="status-text" style={{ marginLeft: '8px' }}>
+                    {user.status}
+                  </span>
+                )}
+              </>
+            )}
             {unreadCounts[user.id] > 0 && (
               <span className="unread-indicator">{unreadCounts[user.id]}</span>
             )}

@@ -20,6 +20,8 @@ const Messaging = ({ currentUser }) => {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [status, setStatus] = useState(currentUser.status || '');
+  const [expandedThreads, setExpandedThreads] = useState({});
+  const [showReplyInput, setShowReplyInput] = useState({});
 
   useEffect(() => {
     console.log('Current User:', currentUser);
@@ -44,31 +46,29 @@ const Messaging = ({ currentUser }) => {
       });
 
       return () => unsubscribe();
-    } else {
-      setMessages([]); // Clear messages if no channel is selected
-    }
-  }, [selectedChannel]);
-
-  useEffect(() => {
-    if (selectedUser) {
+    } else if (selectedUser) {
       const messageId = [currentUser.id, selectedUser.id].sort().join('_');
       const q = query(
         collection(firestore, `directMessages/${messageId}/messages`),
         orderBy('createdAt')
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt.toDate(),
-        }));
+        const messagesData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
+          };
+        });
         setMessages(messagesData);
-        markMessagesAsRead(messagesData, `directMessages/${messageId}/messages`);
       });
 
       return () => unsubscribe();
+    } else {
+      setMessages([]); // Clear messages if no channel or user is selected
     }
-  }, [selectedUser, currentUser.id]);
+  }, [selectedChannel, selectedUser]);
 
   useEffect(() => {
     const userRef = doc(firestore, 'users', currentUser.id);
@@ -168,6 +168,31 @@ const Messaging = ({ currentUser }) => {
       });
   };
 
+  const toggleThread = (messageId) => {
+    setExpandedThreads(prev => ({
+      ...prev,
+      [messageId]: !prev[messageId],
+    }));
+  };
+
+  const toggleReplyInput = (messageId) => {
+    setShowReplyInput(prev => ({
+      ...prev,
+      [messageId]: !prev[messageId],
+    }));
+  };
+
+  const handleReply = async (messageId, replyText) => {
+    const replyData = {
+      text: replyText,
+      createdAt: new Date(),
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+    };
+
+    await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages/${messageId}/replies`), replyData);
+  };
+
   return (
     <div className="messaging-container">
       <div className="sidebar">
@@ -222,6 +247,24 @@ const Messaging = ({ currentUser }) => {
               <div className={`message-info ${message.senderId === currentUser.id ? 'my-info' : 'other-info'}`}>
                 Sent by {message.senderName} at {format(new Date(message.createdAt), 'p, MMM d')}
               </div>
+              {selectedChannel && (
+                <RepliesButton
+                  messageId={message.id}
+                  channelId={selectedChannel.id}
+                  toggleThread={toggleThread}
+                  toggleReplyInput={toggleReplyInput}
+                />
+              )}
+              {expandedThreads[message.id] && selectedChannel && (
+                <Thread
+                  messageId={message.id}
+                  channelId={selectedChannel.id}
+                  onReply={handleReply}
+                />
+              )}
+              {showReplyInput[message.id] && (
+                <ReplyForm onReply={(text) => handleReply(message.id, text)} />
+              )}
             </div>
           ))}
         </div>
@@ -260,6 +303,87 @@ const Messaging = ({ currentUser }) => {
         </div>
       )}
     </div>
+  );
+};
+
+const RepliesButton = ({ messageId, channelId, toggleThread, toggleReplyInput }) => {
+  const [hasReplies, setHasReplies] = useState(false);
+
+  useEffect(() => {
+    const q = query(
+      collection(firestore, `channels/${channelId}/messages/${messageId}/replies`)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setHasReplies(!snapshot.empty);
+    });
+
+    return () => unsubscribe();
+  }, [channelId, messageId]);
+
+  return (
+    <>
+      {hasReplies ? (
+        <button onClick={() => toggleThread(messageId)}>
+          View Thread
+        </button>
+      ) : (
+        <button onClick={() => toggleReplyInput(messageId)}>
+          Reply
+        </button>
+      )}
+    </>
+  );
+};
+
+const Thread = ({ messageId, channelId, onReply }) => {
+  const [replies, setReplies] = useState([]);
+
+  useEffect(() => {
+    const q = query(
+      collection(firestore, `channels/${channelId}/messages/${messageId}/replies`),
+      orderBy('createdAt')
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const repliesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setReplies(repliesData);
+    });
+
+    return () => unsubscribe();
+  }, [channelId, messageId]);
+
+  return (
+    <div className="thread">
+      {replies.map(reply => (
+        <div key={reply.id} className="reply">
+          <strong>{reply.senderName}:</strong> {reply.text}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const ReplyForm = ({ onReply }) => {
+  const [replyText, setReplyText] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onReply(replyText);
+    setReplyText('');
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        value={replyText}
+        onChange={(e) => setReplyText(e.target.value)}
+        placeholder="Type a reply"
+      />
+      <button type="submit">Reply</button>
+    </form>
   );
 };
 
