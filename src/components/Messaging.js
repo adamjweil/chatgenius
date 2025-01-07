@@ -237,6 +237,22 @@ const Messaging = ({ currentUser }) => {
     await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages/${messageId}/replies`), replyData);
   };
 
+  const leaveChannel = async () => {
+    if (!selectedChannel || !currentUser) return;
+
+    try {
+      const userRef = doc(firestore, 'users', currentUser.id);
+      await updateDoc(userRef, {
+        joinedChannels: arrayRemove({ id: selectedChannel.id, name: selectedChannel.name })
+      });
+
+      setSelectedChannel(null);
+      console.log('Left the channel');
+    } catch (error) {
+      console.error("Error leaving channel:", error);
+    }
+  };
+
   return (
     <div className="messaging-container">
       <div className="sidebar">
@@ -270,6 +286,9 @@ const Messaging = ({ currentUser }) => {
             {selectedChannel && (
               <CameraSharing currentUser={currentUser} selectedChannel={selectedChannel} />
             )}
+            {selectedChannel && (
+              <button onClick={leaveChannel}>Leave Channel</button>
+            )}
           </div>
         )}
         {selectedChannel && channelFiles.length > 0 && (
@@ -297,6 +316,7 @@ const Messaging = ({ currentUser }) => {
               className={`message ${message.senderId === currentUser.id ? 'my-message' : 'other-message'}`}
             >
               <div>
+                <strong>{message.senderName}:</strong>
                 {message.text}
                 {message.fileURL && (
                   <div>
