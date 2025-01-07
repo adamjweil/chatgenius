@@ -3,7 +3,7 @@ import { collection, getDocs, doc, setDoc, query, orderBy, onSnapshot } from 'fi
 import { firestore } from '../firebase';
 import Modal from 'react-modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faCommentDots } from '@fortawesome/free-solid-svg-icons';
 import { Tooltip } from 'react-tooltip';
 
 const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
@@ -88,15 +88,19 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
             <span>{user.name}</span>
             {user.status && (
               <>
-                <span
-                  className="status-indicator"
-                  onClick={() => toggleStatusVisibility(user.id)}
-                  style={{ marginLeft: '8px', color: 'green', cursor: 'pointer' }}
-                >
-                  ●
-                </span>
-                {visibleStatus[user.id] && (
-                  <span className="status-text" style={{ marginLeft: '8px' }}>
+                {!visibleStatus[user.id] ? (
+                  <FontAwesomeIcon
+                    icon={faCommentDots}
+                    onClick={() => toggleStatusVisibility(user.id)}
+                    className="status-indicator"
+                    style={{ marginLeft: '8px', color: 'blue', cursor: 'pointer' }}
+                  />
+                ) : (
+                  <span
+                    className="status-text"
+                    onClick={() => toggleStatusVisibility(user.id)}
+                    style={{ marginLeft: '8px', cursor: 'pointer' }}
+                  >
                     {user.status}
                   </span>
                 )}
