@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, writeBatch, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, arrayRemove, writeBatch, updateDoc, getDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { auth, firestore } from '../firebase';
 import Channels from './Channels';
 import DirectMessages from './DirectMessages';
+import CameraSharing from './CameraSharing';
 import './Messaging.css';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { format } from 'date-fns';
@@ -22,6 +23,7 @@ const Messaging = ({ currentUser }) => {
   const [expandedThreads, setExpandedThreads] = useState({});
   const [showReplyInput, setShowReplyInput] = useState({});
   const [userNames, setUserNames] = useState({});
+  const [channelFiles, setChannelFiles] = useState([]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -59,6 +61,10 @@ const Messaging = ({ currentUser }) => {
           };
         });
         setMessages(messagesData);
+        setChannelFiles(messagesData.filter(msg => msg.fileURL).map(msg => ({
+          fileName: msg.fileName,
+          fileURL: msg.fileURL
+        })));
         markMessagesAsRead(messagesData, `channels/${selectedChannel.id}/messages`);
       });
 
@@ -85,6 +91,7 @@ const Messaging = ({ currentUser }) => {
       return () => unsubscribe();
     } else {
       setMessages([]); // Clear messages if no channel or user is selected
+      setChannelFiles([]); // Clear files if no channel is selected
     }
   }, [selectedChannel, selectedUser]);
 
@@ -129,9 +136,19 @@ const Messaging = ({ currentUser }) => {
 
   const handleLike = async (messageId, path) => {
     const messageRef = doc(firestore, path, messageId);
-    await updateDoc(messageRef, {
-      likes: arrayUnion(currentUser.id)
-    });
+    const messageDoc = await getDoc(messageRef);
+    if (messageDoc.exists()) {
+      const messageData = messageDoc.data();
+      if (messageData.likes.includes(currentUser.id)) {
+        await updateDoc(messageRef, {
+          likes: arrayRemove(currentUser.id)
+        });
+      } else {
+        await updateDoc(messageRef, {
+          likes: arrayUnion(currentUser.id)
+        });
+      }
+    }
   };
 
   const fetchUserNames = async (userIds) => {
@@ -250,6 +267,27 @@ const Messaging = ({ currentUser }) => {
             <h2>
               {selectedChannel ? `#${selectedChannel.name}` : `Chat with ${selectedUser.name}`}
             </h2>
+            {selectedChannel && (
+              <CameraSharing currentUser={currentUser} selectedChannel={selectedChannel} />
+            )}
+          </div>
+        )}
+        {selectedChannel && channelFiles.length > 0 && (
+          <div className="channel-files">
+            <h3>Files in this Channel:</h3>
+            <div className="file-chips">
+              {channelFiles.map((file, index) => (
+                <a
+                  key={index}
+                  href={file.fileURL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="file-chip"
+                >
+                  {file.fileName}
+                </a>
+              ))}
+            </div>
           </div>
         )}
         <div className="messages">
@@ -399,6 +437,7 @@ const Thread = ({ messageId, channelId, onReply }) => {
           <strong>{reply.senderName}:</strong> {reply.text}
         </div>
       ))}
+      <ReplyForm onReply={(text) => onReply(messageId, text)} />
     </div>
   );
 };
