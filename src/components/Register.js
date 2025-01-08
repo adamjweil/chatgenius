@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { useNavigate } from 'react-router-dom';
+import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { useNavigate, Link } from 'react-router-dom';
 import { auth, firestore } from '../firebase';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faGoogle } from '@fortawesome/free-brands-svg-icons';
 import '../App.css'; // Import the CSS file for styling
 
 const Register = () => {
@@ -30,9 +32,54 @@ const Register = () => {
     }
   };
 
+  const handleSocialRegister = async (provider) => {
+    try {
+      console.log('Starting social registration...');
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Check if user already exists
+      const userRef = doc(firestore, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+
+      if (!userDoc.exists()) {
+        await setDoc(userRef, {
+          name: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          joinedChannels: [],
+          createdAt: new Date()
+        });
+      }
+
+      navigate('/messaging');
+    } catch (error) {
+      console.error("Detailed error in social registration:", error);
+      if (error.code) {
+        console.error("Error code:", error.code);
+      }
+      alert(`Registration failed: ${error.message}`);
+    }
+  };
+
+  const handleGoogleRegister = () => {
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/userinfo.email');
+    provider.addScope('https://www.googleapis.com/auth/userinfo.profile');
+    handleSocialRegister(provider);
+  };
+
   return (
     <div className="register-container">
       <h1>Create an Account</h1>
+      <div className="social-login">
+        <button onClick={handleGoogleRegister} className="social-button google">
+          <FontAwesomeIcon icon={faGoogle} /> Sign up with Google
+        </button>
+      </div>
+      <div className="divider">
+        <span>or</span>
+      </div>
       <form onSubmit={handleRegister} className="register-form">
         <input
           type="text"
@@ -57,6 +104,9 @@ const Register = () => {
         />
         <button type="submit">Register</button>
       </form>
+      <p>
+        Already have an account? <Link to="/login">Sign in</Link>
+      </p>
     </div>
   );
 };
