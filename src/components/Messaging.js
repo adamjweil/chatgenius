@@ -3,6 +3,7 @@ import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, arrayR
 import { signOut } from 'firebase/auth';
 import { auth, firestore } from '../firebase';
 import CameraSharing from './CameraSharing';
+import MessageList from './MessageList';
 import '../App.css';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { format } from 'date-fns';
@@ -267,15 +268,26 @@ const Messaging = ({ currentUser }) => {
       <div className="chat-area">
         {(selectedChannel || selectedUser) && (
           <div className="chat-header">
-            <h2>
-              {selectedChannel ? `#${selectedChannel.name}` : `Chat with ${selectedUser.name}`}
-            </h2>
-            {selectedChannel && (
-              <CameraSharing currentUser={currentUser} selectedChannel={selectedChannel} />
-            )}
-            {selectedChannel && (
-              <button onClick={leaveChannel}>Leave Channel</button>
-            )}
+            <div className="chat-header-top">
+              <div className="header-left">
+                {selectedChannel && (
+                  <CameraSharing 
+                    currentUser={currentUser} 
+                    selectedChannel={selectedChannel} 
+                  />
+                )}
+              </div>
+              <h2>
+                {selectedChannel ? `#${selectedChannel.name}` : `Chat with ${selectedUser.name}`}
+              </h2>
+              <div className="header-right">
+                {selectedChannel && (
+                  <button onClick={leaveChannel} className="leave-channel-button">
+                    Leave Channel
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
         {selectedChannel && channelFiles.length > 0 && (
@@ -296,61 +308,20 @@ const Messaging = ({ currentUser }) => {
             </div>
           </div>
         )}
-        <div className="messages">
-          {messages.map(message => (
-            <div
-              key={message.id}
-              className={`message ${message.senderId === currentUser.id ? 'my-message' : 'other-message'}`}
-            >
-              <div>
-                <strong>{message.senderName}:</strong>
-                {message.text}
-                {message.fileURL && (
-                  <div>
-                    <a href={message.fileURL} target="_blank" rel="noopener noreferrer">
-                      {message.fileName}
-                    </a>
-                  </div>
-                )}
-              </div>
-              <div className={`message-info ${message.senderId === currentUser.id ? 'my-info' : 'other-info'}`}>
-                Sent by {message.senderName} at {format(new Date(message.createdAt), 'p, MMM d')}
-              </div>
-              <div className="like-section">
-                <button onClick={() => handleLike(message.id, selectedChannel ? `channels/${selectedChannel.id}/messages` : `directMessages/${[currentUser.id, selectedUser.id].sort().join('_')}/messages`)}>
-                  <FontAwesomeIcon icon={faHeart} />
-                </button>
-                {message.likes && message.likes.map((like, index) => (
-                  <span
-                    key={index}
-                    onMouseEnter={() => fetchUserNames(message.likes)}
-                    title={message.likes.map(userId => userNames[userId]).join(', ')}
-                  >
-                    <FontAwesomeIcon icon={faHeart} style={{ color: 'red', marginLeft: '4px' }} />
-                  </span>
-                ))}
-              </div>
-              {selectedChannel && (
-                <RepliesButton
-                  messageId={message.id}
-                  channelId={selectedChannel.id}
-                  toggleThread={toggleThread}
-                  toggleReplyInput={toggleReplyInput}
-                />
-              )}
-              {expandedThreads[message.id] && selectedChannel && (
-                <Thread
-                  messageId={message.id}
-                  channelId={selectedChannel.id}
-                  onReply={handleReply}
-                />
-              )}
-              {showReplyInput[message.id] && (
-                <ReplyForm onReply={(text) => handleReply(message.id, text)} />
-              )}
-            </div>
-          ))}
-        </div>
+        <MessageList
+          messages={messages}
+          currentUser={currentUser}
+          selectedChannel={selectedChannel}
+          selectedUser={selectedUser}
+          handleLike={handleLike}
+          expandedThreads={expandedThreads}
+          showReplyInput={showReplyInput}
+          toggleThread={toggleThread}
+          toggleReplyInput={toggleReplyInput}
+          handleReply={handleReply}
+          userNames={userNames}
+          fetchUserNames={fetchUserNames}
+        />
         {(selectedChannel || selectedUser) && (
           <form onSubmit={sendMessage} className="message-form">
             <div className="input-container">
@@ -386,88 +357,6 @@ const Messaging = ({ currentUser }) => {
         </div>
       )}
     </div>
-  );
-};
-
-const RepliesButton = ({ messageId, channelId, toggleThread, toggleReplyInput }) => {
-  const [hasReplies, setHasReplies] = useState(false);
-
-  useEffect(() => {
-    const q = query(
-      collection(firestore, `channels/${channelId}/messages/${messageId}/replies`)
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setHasReplies(!snapshot.empty);
-    });
-
-    return () => unsubscribe();
-  }, [channelId, messageId]);
-
-  return (
-    <>
-      {hasReplies ? (
-        <button onClick={() => toggleThread(messageId)}>
-          View Thread
-        </button>
-      ) : (
-        <button onClick={() => toggleReplyInput(messageId)}>
-          Reply
-        </button>
-      )}
-    </>
-  );
-};
-
-const Thread = ({ messageId, channelId, onReply }) => {
-  const [replies, setReplies] = useState([]);
-
-  useEffect(() => {
-    const q = query(
-      collection(firestore, `channels/${channelId}/messages/${messageId}/replies`),
-      orderBy('createdAt')
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const repliesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setReplies(repliesData);
-    });
-
-    return () => unsubscribe();
-  }, [channelId, messageId]);
-
-  return (
-    <div className="thread">
-      {replies.map(reply => (
-        <div key={reply.id} className="reply">
-          <strong>{reply.senderName}:</strong> {reply.text}
-        </div>
-      ))}
-      <ReplyForm onReply={(text) => onReply(messageId, text)} />
-    </div>
-  );
-};
-
-const ReplyForm = ({ onReply }) => {
-  const [replyText, setReplyText] = useState('');
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onReply(replyText);
-    setReplyText('');
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="text"
-        value={replyText}
-        onChange={(e) => setReplyText(e.target.value)}
-        placeholder="Type a reply"
-      />
-      <button type="submit">Reply</button>
-    </form>
   );
 };
 

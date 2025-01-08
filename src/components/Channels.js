@@ -21,6 +21,7 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [activeShares, setActiveShares] = useState({});
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [channelStats, setChannelStats] = useState({});
 
   useEffect(() => {
     if (currentUser && currentUser.id) {
@@ -126,6 +127,43 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
   useEffect(() => {
     setActiveChannel(propSelectedChannel);
   }, [propSelectedChannel]);
+
+  useEffect(() => {
+    const fetchChannelStats = async () => {
+      const stats = {};
+      
+      for (const channel of channels) {
+        try {
+          // Get messages count
+          const messagesQuery = query(
+            collection(firestore, `channels/${channel.id}/messages`)
+          );
+          const messagesSnapshot = await getDocs(messagesQuery);
+          
+          // Get users who have joined this channel
+          const userRef = collection(firestore, 'users');
+          const usersSnapshot = await getDocs(userRef);
+          const joinedUsers = usersSnapshot.docs.filter(doc => {
+            const userData = doc.data();
+            return userData.joinedChannels?.some(c => c.id === channel.id);
+          });
+
+          stats[channel.id] = {
+            messageCount: messagesSnapshot.size,
+            userCount: joinedUsers.length
+          };
+        } catch (error) {
+          console.error(`Error fetching stats for channel ${channel.id}:`, error);
+        }
+      }
+      
+      setChannelStats(stats);
+    };
+
+    if (channels.length > 0) {
+      fetchChannelStats();
+    }
+  }, [channels]);
 
   const fetchChannels = async () => {
     try {
@@ -289,6 +327,35 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
     setIsCollapsed(!isCollapsed);
   };
 
+  const leaveChannel = async (channel) => {
+    try {
+      // Remove channel from user's joinedChannels in Firestore
+      const userRef = doc(firestore, 'users', currentUser.id);
+      const userDoc = await getDoc(userRef);
+      const userData = userDoc.data();
+      
+      const updatedJoinedChannels = userData.joinedChannels.filter(
+        ch => ch.id !== channel.id
+      );
+      
+      await updateDoc(userRef, {
+        joinedChannels: updatedJoinedChannels
+      });
+
+      // Update local state
+      setJoinedChannels(prevChannels => 
+        prevChannels.filter(ch => ch.id !== channel.id)
+      );
+
+      // If user is currently in this channel, clear it
+      if (selectedChannel && selectedChannel.id === channel.id) {
+        onChannelSelect(null);
+      }
+    } catch (error) {
+      console.error('Error leaving channel:', error);
+    }
+  };
+
   return (
     <div>
       <div className="channels-header">
@@ -325,7 +392,7 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
             >
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 #{channel.name}
-                {activeShares[channel.id] && <span className="active-share-indicator">•</span>}
+                {activeShares[channel.id] && <span className="active-share-indicator" />}
               </div>
               {unreadCounts[channel.id] > 0 && (
                 <span className="unread-indicator">{unreadCounts[channel.id]}</span>
@@ -334,34 +401,68 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
           ))}
         </ul>
       )}
+      <div className={modalIsOpen ? "modal-overlay" : ""} onClick={() => setModalIsOpen(false)} />
       <Modal
         isOpen={modalIsOpen}
         onRequestClose={() => setModalIsOpen(false)}
         contentLabel="Manage Channels"
-        className="modal"
-        overlayClassName="overlay"
+        className="channels-modal"
+        overlayClassName="modal-overlay"
       >
-        <h2>Available Channels</h2>
-        <ul>
-          {channels.map(channel => (
-            <li key={channel.id}>
-              {channel.name} 
-              {joinedChannels.some(c => c.id === channel.id) ? ' (Joined)' : (
-                <button onClick={() => joinChannel(channel)}>Join</button>
-              )}
-            </li>
-          ))}
-        </ul>
-        <form onSubmit={createChannel}>
-          <input
-            value={channelName}
-            onChange={(e) => setChannelName(e.target.value)}
-            placeholder="New Channel Name"
-            required
-          />
-          <button type="submit">Create Channel</button>
-        </form>
-        <button onClick={() => setModalIsOpen(false)}>Close</button>
+        <div className="channels-modal-content">
+          <h2>Available Channels</h2>
+          
+          <form onSubmit={createChannel} className="new-channel-form">
+            <input
+              value={channelName}
+              onChange={(e) => setChannelName(e.target.value)}
+              placeholder="Create a new channel"
+              className="channel-input"
+              required
+            />
+            <button type="submit" className="save">Create Channel</button>
+          </form>
+
+          <div className="channels-list">
+            {channels.map(channel => (
+              <div key={channel.id} className={`channel-item ${channel.currentStreamer ? 'streaming' : ''}`}>
+                <div className="channel-info">
+                  <span className="channel-name">#{channel.name}</span>
+                  <div className="channel-stats">
+                    {channelStats[channel.id] && (
+                      <>
+                        <span>{channelStats[channel.id].userCount} members</span>
+                        <span>•</span>
+                        <span>{channelStats[channel.id].messageCount} messages</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {joinedChannels.some(c => c.id === channel.id) ? (
+                  <button 
+                    onClick={() => leaveChannel(channel)}
+                    className="leave-button"
+                  >
+                    Leave
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => joinChannel(channel)}
+                    className="join-button"
+                  >
+                    Join
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="modal-buttons">
+            <button onClick={() => setModalIsOpen(false)} className="cancel">
+              Close
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

@@ -20,6 +20,7 @@ const CameraSharing = ({ currentUser, selectedChannel }) => {
           navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => {
               videoRef.current.srcObject = stream;
+              videoRef.current.style.display = 'block';
               videoRef.current.onloadedmetadata = () => {
                 videoRef.current.play().catch(error => console.error('Error playing video:', error));
               };
@@ -28,6 +29,7 @@ const CameraSharing = ({ currentUser, selectedChannel }) => {
         } else if (!data.currentStreamer) {
           if (videoRef.current) {
             videoRef.current.srcObject = null;
+            videoRef.current.style.display = 'none';
           }
         }
       } else {
@@ -40,10 +42,11 @@ const CameraSharing = ({ currentUser, selectedChannel }) => {
   }, [selectedChannel, currentUser.id]);
 
   const startSharing = async () => {
-    if (!isSharing) {
+    if (!isSharing && !currentStreamer) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         videoRef.current.srcObject = stream;
+        videoRef.current.style.display = 'block';
         videoRef.current.onloadedmetadata = () => {
           videoRef.current.play().catch(error => console.error('Error playing video:', error));
         };
@@ -73,6 +76,7 @@ const CameraSharing = ({ currentUser, selectedChannel }) => {
         });
       }
 
+      videoRef.current.style.display = 'none';
       const channelRef = doc(firestore, 'channels', selectedChannel.id);
       await updateDoc(channelRef, {
         currentStreamer: null,
@@ -83,34 +87,32 @@ const CameraSharing = ({ currentUser, selectedChannel }) => {
     }
   };
 
-  const stopAllStreams = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject;
-      const tracks = stream.getTracks();
-      tracks.forEach(track => {
-        track.stop();
-        console.log('Stopped track:', track);
-      });
-    }
-  };
-
-  stopAllStreams(); // Uncomment this line to run the function once
-
   return (
     <div className="camera-sharing">
-      {currentStreamer === currentUser.id && (
-        <div className="sharing-indicator">
-          You are sharing your camera
-        </div>
-      )}
-      {currentStreamer === currentUser.id ? (
-        <button onClick={stopSharing}>Stop Sharing</button>
-      ) : (
-        <button onClick={startSharing} disabled={!!currentStreamer}>
-          Start Sharing
+      {(!currentStreamer || currentStreamer === currentUser.id) && (
+        <button 
+          onClick={isSharing ? stopSharing : startSharing}
+          className={`camera-control-button ${isSharing ? 'stop-sharing' : 'start-sharing'}`}
+          disabled={currentStreamer && currentStreamer !== currentUser.id}
+        >
+          {isSharing ? 'Stop Sharing' : 'Start Sharing'}
         </button>
       )}
-      <video ref={videoRef} autoPlay muted />
+      {currentStreamer && (
+        <div className="sharing-indicator">
+          {currentStreamer === currentUser.id 
+            ? 'You are sharing your camera'
+            : 'Someone is sharing their camera'}
+        </div>
+      )}
+      <video 
+        ref={videoRef} 
+        autoPlay 
+        muted={currentStreamer === currentUser.id}
+        className={`camera-stream ${
+          currentStreamer === currentUser.id ? 'broadcaster' : 'viewer'
+        }`}
+      />
     </div>
   );
 };
