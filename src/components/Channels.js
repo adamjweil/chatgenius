@@ -25,8 +25,17 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
 
   useEffect(() => {
     if (currentUser && currentUser.id) {
-      fetchChannels();
-      fetchJoinedChannels();
+      // Create a real-time listener for the user document
+      const userRef = doc(firestore, 'users', currentUser.id);
+      const unsubscribe = onSnapshot(userRef, (doc) => {
+        if (doc.exists()) {
+          const userData = doc.data();
+          setJoinedChannels(userData.joinedChannels || []);
+        }
+      });
+
+      // Cleanup subscription on unmount
+      return () => unsubscribe();
     }
   }, [currentUser]);
 
@@ -176,27 +185,6 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
     }
   };
 
-  const fetchJoinedChannels = async () => {
-    try {
-      if (!currentUser || !currentUser.id) {
-        console.error("Current user is not defined");
-        return;
-      }
-
-      const userDocRef = doc(firestore, 'users', currentUser.id);
-      const userDoc = await getDoc(userDocRef);
-
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        setJoinedChannels(userData.joinedChannels || []);
-      } else {
-        console.error("User document does not exist");
-      }
-    } catch (error) {
-      console.error("Error fetching joined channels:", error);
-    }
-  };
-
   const calculateUnreadCounts = async (channelsData) => {
     const counts = {};
     for (const channel of channelsData) {
@@ -233,9 +221,24 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
         name: channelName,
         createdAt: new Date()
       });
+
+      // Just join the channel without selecting it
+      const newChannel = { id: newChannelRef.id, name: channelName };
+      
+      // Update user's joined channels in Firestore
+      const userRef = doc(firestore, 'users', currentUser.id);
+      await updateDoc(userRef, {
+        joinedChannels: arrayUnion({ id: newChannelRef.id, name: channelName })
+      });
+
+      // Update local state
+      setJoinedChannels(prev => [...prev, newChannel]);
+      
+      // Clear the input and close modal
       setChannelName('');
-      fetchChannels();
-      joinChannel({ id: newChannelRef.id, name: channelName });
+      setModalIsOpen(false);
+      
+      // Note: Removed the onChannelSelect call so the channel won't automatically open
     } catch (error) {
       console.error("Error creating channel:", error);
     }
@@ -261,8 +264,8 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
         await updateDoc(userRef, {
           joinedChannels: arrayUnion({ id: channel.id, name: channel.name })
         });
-
-        onChannelSelect(channel);
+        
+        // Removed the onChannelSelect(channel) call
       } catch (error) {
         console.error("Error updating Firestore:", error);
       }
@@ -342,15 +345,23 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
         joinedChannels: updatedJoinedChannels
       });
 
-      // Update local state
+      // Update local state immediately
       setJoinedChannels(prevChannels => 
         prevChannels.filter(ch => ch.id !== channel.id)
       );
 
       // If user is currently in this channel, clear it
       if (selectedChannel && selectedChannel.id === channel.id) {
-        onChannelSelect(null);
+        setSelectedChannel(null);
+        setActiveChannel(null);
+        if (typeof onChannelSelect === 'function') {
+          onChannelSelect(null);
+        }
       }
+
+      // Close the modal after leaving
+      setModalIsOpen(false);
+      
     } catch (error) {
       console.error('Error leaving channel:', error);
     }

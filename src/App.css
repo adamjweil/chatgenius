@@ -1191,4 +1191,88 @@
   border-bottom: 1px solid #e0e0e0; /* Or whatever your border style is */
 }
 
+.social-login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  margin-bottom: 20px;
+}
+
+.social-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+  width: 80%;
+}
+
+.social-button.google {
+  background-color: #fff;
+  border: 1px solid #dadce0;
+  color: #3c4043;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  border-radius: 4px;
+  padding: 12px 16px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.social-button.google:hover {
+  background-color: #f8f9fa;
+  border-color: #dadce0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.social-button.google:active {
+  background-color: #f1f3f4;
+  border-color: #dadce0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.social-button.google .fa-google {
+  color: #4285f4;  /* Google Blue */
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.social-button.github {
+  background: #24292e;
+  color: white;
+}
+
+.social-button.github:hover {
+  background: #2f363d;
+}
+
+.divider {
+  width: 100%;
+  max-width: 300px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+  line-height: 0.1em;
+  margin: 20px auto;
+  position: relative;
+}
+
+.divider span {
+  background: #fff;
+  padding: 0 10px;
+  color: #666;
+  font-size: 14px;
+  position: relative;
+  top: 0.5em;
+}
+
 
