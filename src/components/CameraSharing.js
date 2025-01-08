@@ -14,31 +14,38 @@ const CameraSharing = ({ currentUser, selectedChannel }) => {
       const data = doc.data();
       if (data) {
         setCurrentStreamer(data.currentStreamer);
-        console.log('Current streamer:', data.currentStreamer);
+        setIsSharing(data.currentStreamer === currentUser.id);
 
-        if (data.currentStreamer && data.currentStreamer !== currentUser.id) {
-          navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-              videoRef.current.srcObject = stream;
-              videoRef.current.style.display = 'block';
-              videoRef.current.onloadedmetadata = () => {
-                videoRef.current.play().catch(error => console.error('Error playing video:', error));
-              };
-            })
-            .catch(error => console.error('Error accessing camera:', error));
-        } else if (!data.currentStreamer) {
-          if (videoRef.current) {
+        if (data.currentStreamer) {
+          if (data.currentStreamer === currentUser.id) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+              .then(stream => {
+                if (videoRef.current) {
+                  videoRef.current.srcObject = stream;
+                  videoRef.current.style.display = 'block';
+                  return videoRef.current.play();
+                }
+              })
+              .catch(error => console.error('Error accessing camera:', error));
+          }
+        } else {
+          if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject;
+            stream.getTracks().forEach(track => track.stop());
             videoRef.current.srcObject = null;
-            videoRef.current.style.display = 'none';
           }
         }
-      } else {
-        console.error('Channel does not exist');
-        setCurrentStreamer(null);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject;
+        stream.getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+      }
+    };
   }, [selectedChannel, currentUser.id]);
 
   const startSharing = async () => {
@@ -93,7 +100,6 @@ const CameraSharing = ({ currentUser, selectedChannel }) => {
         <button 
           onClick={isSharing ? stopSharing : startSharing}
           className={`camera-control-button ${isSharing ? 'stop-sharing' : 'start-sharing'}`}
-          disabled={currentStreamer && currentStreamer !== currentUser.id}
         >
           {isSharing ? 'Stop Sharing' : 'Start Sharing'}
         </button>
@@ -108,6 +114,7 @@ const CameraSharing = ({ currentUser, selectedChannel }) => {
       <video 
         ref={videoRef} 
         autoPlay 
+        playsInline
         muted={currentStreamer === currentUser.id}
         className={`camera-stream ${
           currentStreamer === currentUser.id ? 'broadcaster' : 'viewer'
