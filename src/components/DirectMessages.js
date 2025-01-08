@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, setDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, orderBy } from 'firebase/firestore';
 import { firestore } from '../firebase';
 import Modal from 'react-modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faCommentDots } from '@fortawesome/free-solid-svg-icons';
-import { Tooltip } from 'react-tooltip';
+import { faPlus, faCommentDots, faCaretDown, faCaretRight } from '@fortawesome/free-solid-svg-icons';
+import '../App.css';
 
 const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
   const [users, setUsers] = useState([]);
@@ -12,6 +12,7 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
   const [unreadCounts, setUnreadCounts] = useState({});
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [visibleStatus, setVisibleStatus] = useState({});
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -37,10 +38,6 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
     fetchUsers();
     fetchMessageUsers();
   }, [currentUser, users]);
-
-//   useEffect(() => {
-//     console.log('Message Users:', messageUsers);
-//   }, [messageUsers]);
 
   const calculateUnreadCounts = async (messageUsersData) => {
     const counts = {};
@@ -71,47 +68,60 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
     }));
   };
 
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+  };
+
   return (
     <div>
       <div className="direct-messages-header">
-        <h2 className="direct-messages-title">Direct Messages</h2>
-        <FontAwesomeIcon icon={faPlus} onClick={() => setModalIsOpen(true)} className="plus-icon" />
+        <h2>
+          <FontAwesomeIcon
+            icon={isCollapsed ? faCaretRight : faCaretDown}
+            onClick={toggleCollapse}
+            className="toggle-icon"
+          />
+          Direct Messages
+        </h2>
+        <FontAwesomeIcon icon={faPlus} onClick={() => setModalIsOpen(true)} className="plus-icon" style={{ fontSize: '1.2rem' }} />
       </div>
-      <ul>
-        {messageUsers.map(user => (
-          <li
-            key={user.id}
-            onClick={() => onUserSelect(user)}
-            className={`${selectedUser && selectedUser.id === user.id ? 'selected' : ''}`}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-          >
-            <span>{user.name}</span>
-            {user.status && (
-              <>
-                {!visibleStatus[user.id] ? (
-                  <FontAwesomeIcon
-                    icon={faCommentDots}
-                    onClick={() => toggleStatusVisibility(user.id)}
-                    className="status-indicator"
-                    style={{ marginLeft: '8px', color: 'blue', cursor: 'pointer' }}
-                  />
-                ) : (
-                  <span
-                    className="status-text"
-                    onClick={() => toggleStatusVisibility(user.id)}
-                    style={{ marginLeft: '8px', cursor: 'pointer' }}
-                  >
-                    {user.status}
-                  </span>
-                )}
-              </>
-            )}
-            {unreadCounts[user.id] > 0 && (
-              <span className="unread-indicator">{unreadCounts[user.id]}</span>
-            )}
-          </li>
-        ))}
-      </ul>
+      {!isCollapsed && (
+        <ul>
+          {messageUsers.map(user => (
+            <li
+              key={user.id}
+              onClick={() => onUserSelect(user)}
+              className={`${selectedUser && selectedUser.id === user.id ? 'selected' : ''}`}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <span>{user.name}</span>
+              {user.status && (
+                <>
+                  {!visibleStatus[user.id] ? (
+                    <FontAwesomeIcon
+                      icon={faCommentDots}
+                      onClick={() => toggleStatusVisibility(user.id)}
+                      className="status-indicator"
+                      style={{ marginLeft: '8px', color: 'blue', cursor: 'pointer' }}
+                    />
+                  ) : (
+                    <span
+                      className="status-text"
+                      onClick={() => toggleStatusVisibility(user.id)}
+                      style={{ marginLeft: '8px', cursor: 'pointer' }}
+                    >
+                      {user.status}
+                    </span>
+                  )}
+                </>
+              )}
+              {unreadCounts[user.id] > 0 && (
+                <span className="unread-indicator">{unreadCounts[user.id]}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
       <Modal
         isOpen={modalIsOpen}
         onRequestClose={() => setModalIsOpen(false)}

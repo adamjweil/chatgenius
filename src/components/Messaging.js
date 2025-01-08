@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, arrayRemove, writeBatch, updateDoc, getDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { auth, firestore } from '../firebase';
-import Channels from './Channels';
-import DirectMessages from './DirectMessages';
 import CameraSharing from './CameraSharing';
-import './Messaging.css';
+import '../App.css';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperclip, faHeart } from '@fortawesome/free-solid-svg-icons';
+import Sidebar from './Sidebar';
 
 const Messaging = ({ currentUser }) => {
   const [messages, setMessages] = useState([]);
@@ -255,28 +254,16 @@ const Messaging = ({ currentUser }) => {
 
   return (
     <div className="messaging-container">
-      <div className="sidebar">
-        <Channels
-          currentUser={currentUser}
-          onChannelSelect={handleChannelSelect}
-          selectedChannel={selectedChannel}
-        />
-        <DirectMessages
-          currentUser={currentUser}
-          onUserSelect={handleUserSelect}
-          selectedUser={selectedUser}
-        />
-        <div className="user-info">
-          <strong>{currentUser.name}</strong>
-          <div className="status">
-            <span>{status || "Set your status"}</span>
-            <button onClick={() => setStatusModalOpen(true)}>
-              {status ? "Change Status" : "Set Status"}
-            </button>
-          </div>
-        </div>
-        <button onClick={handleLogout} className="logout-button">Logout</button>
-      </div>
+      <Sidebar
+        currentUser={currentUser}
+        selectedChannel={selectedChannel}
+        selectedUser={selectedUser}
+        handleChannelSelect={handleChannelSelect}
+        handleUserSelect={handleUserSelect}
+        handleLogout={handleLogout}
+        status={status}
+        setStatusModalOpen={setStatusModalOpen}
+      />
       <div className="chat-area">
         {(selectedChannel || selectedUser) && (
           <div className="chat-header">
