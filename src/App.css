@@ -92,36 +92,138 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #f4f4f8;
+  height: 100vh;
 }
 
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
+  padding: 20px;
+  padding-bottom: 80px;
+}
+
+/* Only add large margin when viewing someone else's stream */
+.messages.viewing-stream {
+  margin-top: 300px;
 }
 
 .message {
-  padding: 10px;
-  margin: 5px 0;
-  border-radius: 10px;
-  max-width: 100%;
   display: flex;
   flex-direction: column;
+  margin-bottom: 8px;
+  padding: 4px 20px 4px 8px;
+  border-radius: 6px;
+  transition: background-color 0.1s ease;
+}
+
+.message:hover {
+  background-color: #f8f9fa;
+}
+
+.message-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.message-header strong {
+  font-weight: 900;
+  font-size: 15px;
+  color: #1d1c1d;
+}
+
+.message-timestamp {
+  color: #616061;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.message-content {
+  color: #1d1c1d;
+  font-size: 15px;
+  line-height: 1.46668;
+  margin-left: 0;
+  white-space: pre-wrap;
+}
+
+.message-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.like-section {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #616061;
+}
+
+.like-section button {
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #616061;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.like-section button:hover {
+  background-color: #f4f4f4;
+  color: #1d1c1d;
+}
+
+.file-attachment {
+  margin-top: 8px;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border: 1px solid #e3e3e3;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.file-attachment a {
+  color: #1264a3;
+  text-decoration: none;
+}
+
+.file-attachment a:hover {
+  text-decoration: underline;
 }
 
 .my-message {
-  background-color: #d1e7dd;
   align-self: flex-end;
   text-align: right;
+  max-width: 50%;
+  margin-left: auto;
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
 }
 
 .other-message {
-  background-color: #f8d7da;
   align-self: flex-start;
   text-align: left;
+  max-width: 50%;
+  margin-right: auto;
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.channel-message {
+  align-self: flex-start;
+  text-align: left;
+  width: 100%;
+  background-color: transparent;
+  margin-bottom: 8px;
 }
 
 /* Form Styles */
@@ -230,31 +332,43 @@
 
 /* Message Form Styles */
 .message-form {
-  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 260px; /* Width of the sidebar */
+  right: 0;
   padding: 1rem;
   background-color: #fff;
   border-top: 1px solid #ddd;
+  z-index: 100;
 }
 
-.message-form input {
+.input-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+}
+
+.text-input {
   flex: 1;
-  padding: 0.5rem;
+  padding: 10px;
   border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-right: 0.5rem;
+  border-radius: 5px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.message-form button {
-  padding: 0.5rem 1rem;
-  background-color: #4a154b;
+.send-button {
+  padding: 10px 20px;
+  background-color: #007a5a;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
 }
 
-.message-form button:hover {
-  background-color: #3a0d3a;
+.send-button:hover {
+  background-color: #006c4f;
 }
 
 /* Message Info Styles */
@@ -311,8 +425,89 @@
 
 /* Chat Header Styles */
 .chat-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #ddd;
+  background-color: #fff;
+}
+
+.chat-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  max-height: 60px;
+  height: 60px;
+}
+
+.header-left, 
+.header-right {
+  min-width: 240px;
+  display: flex;
+  align-items: center;
+}
+
+.header-left {
+  justify-content: flex-start;
+}
+
+.header-right {
+  justify-content: flex-end;
+}
+
+.chat-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
   text-align: center;
-  margin-bottom: 1rem;
+  flex: 1;
+  line-height: 60px;
+}
+
+.leave-channel-button, 
+.camera-control-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 110px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-control-button.start-sharing {
+  background-color: #28a745;
+  color: white;
+}
+
+.camera-control-button.stop-sharing {
+  background-color: #dc3545;
+  color: white;
+}
+
+.camera-control-button.start-sharing:hover {
+  background-color: #218838;
+}
+
+.camera-control-button.stop-sharing:hover {
+  background-color: #c82333;
+}
+
+.leave-channel-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.leave-channel-button:hover {
+  background-color: #c82333;
+}
+
+.camera-sharing-container {
+  margin-top: 4px;
+  text-align: center;
 }
 
 /* Status Modal Styles */
@@ -452,3 +647,467 @@
   overflow-y: auto;
   min-height: 0;
 }
+
+/* Channel Modal Styles */
+.channels-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  width: 500px;
+  max-width: 90vw;
+  max-height: 80vh;
+  animation: modalFadeIn 0.3s ease;
+}
+
+.channels-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.channels-modal h2 {
+  margin: 0;
+  color: #2c2c2c;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.new-channel-form {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.new-channel-form button.save {
+  background: linear-gradient(to right, #34d399, #10b981);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(52, 211, 153, 0.1);
+}
+
+.new-channel-form button.save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(52, 211, 153, 0.2);
+}
+
+.new-channel-form button.save:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(52, 211, 153, 0.1);
+}
+
+.channel-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.channel-input:focus {
+  outline: none;
+  border-color: #34d399;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.1);
+}
+
+.channels-list {
+  overflow-y: auto;
+  max-height: 300px;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+  padding: 12px 0;
+}
+
+.channel-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: #f8f8f8;
+}
+
+.joined-badge {
+  background: #e0e0e0;
+  color: #666;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.join-button {
+  background: linear-gradient(to right, #34d399, #10b981);
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.join-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(52, 211, 153, 0.2);
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.modal-buttons button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-buttons .cancel {
+  background: #f5f5f5;
+  border: none;
+  color: #666;
+}
+
+.modal-buttons .cancel:hover {
+  background: #eeeeee;
+}
+
+.modal-buttons .save {
+  background: linear-gradient(to right, #ff6b6b, #ff8e8e);
+  border: none;
+  color: white;
+}
+
+.modal-buttons .save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(255, 107, 107, 0.2);
+}
+
+.channel-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.channel-name {
+  font-weight: 500;
+  color: #2c2c2c;
+}
+
+.channel-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.channel-stats span {
+  display: flex;
+  align-items: center;
+}
+
+.channel-stats span:nth-child(2) {
+  font-size: 0.5rem;
+  margin-top: 2px;
+}
+
+.channel-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: #f8f8f8;
+  transition: background-color 0.2s ease;
+}
+
+.channel-item:hover {
+  background: #f0f0f0;
+}
+
+.leave-button {
+  background: linear-gradient(to right, #f87171, #ef4444);
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.leave-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+  background: linear-gradient(to right, #ef4444, #dc2626);
+}
+
+.leave-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
+}
+
+.user-info-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.user-name {
+  white-space: nowrap;
+}
+
+.user-status {
+  color: #ffd700;
+  font-size: 0.85em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  opacity: 0.8;
+}
+
+.thread {
+  margin-top: 8px;
+  margin-left: 32px;
+  padding-left: 12px;
+  border-left: 2px solid #ebedef;
+}
+
+.reply {
+  padding: 4px 0;
+  font-size: 14px;
+  color: #1d1c1d;
+}
+
+.reply strong {
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.reply-info {
+  font-size: 11px;
+  color: #616061;
+  margin-top: 2px;
+  margin-left: 4px;
+}
+
+.reply-form {
+  margin-top: 8px;
+  margin-left: 32px;
+  padding-left: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.reply-form input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #bbbfc3;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.reply-form input:focus {
+  outline: none;
+  border-color: #1264a3;
+  box-shadow: 0 0 0 1px #1264a3;
+}
+
+.reply-form button {
+  padding: 6px 12px;
+  background: #007a5a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.reply-form button:hover {
+  background: #148567;
+}
+
+.replies-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.replies-actions button {
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #616061;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.replies-actions button:hover {
+  background-color: #f4f4f4;
+  color: #1d1c1d;
+}
+
+/* Add some hover effect for direct messages */
+.my-message:hover,
+.other-message:hover {
+  background-color: #f0f1f2;
+}
+
+.camera-sharing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative; /* For absolute positioning of viewer stream */
+}
+
+.sharing-indicator {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #dc3545; /* Red color */
+  font-weight: 500;
+}
+
+.sharing-indicator::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background-color: #dc3545;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.camera-stream {
+  display: none; /* Hidden by default */
+  border-radius: 4px;
+}
+
+/* Style for viewing someone else's stream */
+.camera-stream.viewer {
+  position: fixed;
+  top: 250px;
+  left: calc(50% + 130px);
+  transform: translate(-50%, -50%);
+  width: 550px;
+  height: 250px;
+  max-width: 800px;
+  z-index: 10;
+}
+
+/* Style for viewing your own stream */
+.camera-stream.broadcaster {
+  width: 100px;
+  height: auto;
+  opacity: 0.5;
+  position: relative;
+  transform: none;
+  left: auto;
+}
+
+.camera-control-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Channel streaming indicator */
+.channel-item.streaming::before {
+  content: '•';
+  color: #ff3b30; /* Bright red */
+  font-size: 24px;
+  margin-right: 8px;
+  animation: pulse 2s infinite;
+  display: inline-block;
+  vertical-align: middle;
+  text-shadow: 0 0 8px rgba(255, 59, 48, 0.5); /* Adds a glow effect */
+}
+
+/* Add this if you want a more modern streaming icon instead of a dot */
+.channel-item.streaming::before {
+  content: '📹';
+  font-size: 16px;
+  margin-right: 8px;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.active-share-indicator {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.active-share-indicator::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  background-color: #ff3b30;
+  border-radius: 50%;
+  display: inline-block;
+  animation: recordingPulse 2s infinite;
+  box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
+}
+
+@keyframes recordingPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(255, 59, 48, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 59, 48, 0);
+  }
+}
+
+

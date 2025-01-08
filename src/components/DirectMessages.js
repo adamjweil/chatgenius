@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, setDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { firestore } from '../firebase';
 import Modal from 'react-modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -13,14 +13,25 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser, clearChannel 
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [visibleStatus, setVisibleStatus] = useState({});
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [userStats, setUserStats] = useState({});
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      const usersSnapshot = await getDocs(collection(firestore, 'users'));
-      const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const unsubscribe = onSnapshot(collection(firestore, 'users'), (snapshot) => {
+      const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsers(usersData);
-    };
+      
+      setMessageUsers(prevMessageUsers => {
+        return prevMessageUsers.map(prevUser => {
+          const updatedUser = usersData.find(u => u.id === prevUser.id);
+          return updatedUser || prevUser;
+        });
+      });
+    });
 
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const fetchMessageUsers = async () => {
       const messageUsersSnapshot = await getDocs(collection(firestore, `directMessages`));
       const messageUsersData = messageUsersSnapshot.docs
@@ -35,9 +46,69 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser, clearChannel 
       calculateUnreadCounts(messageUsersData);
     };
 
-    fetchUsers();
-    fetchMessageUsers();
+    if (users.length > 0) {
+      fetchMessageUsers();
+    }
   }, [currentUser, users]);
+
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      const stats = {};
+      for (const user of users) {
+        if (user.id === currentUser.id) continue;
+        
+        try {
+          const messageId = [currentUser.id, user.id].sort().join('_');
+          const messagesQuery = query(
+            collection(firestore, `directMessages/${messageId}/messages`)
+          );
+          const messagesSnapshot = await getDocs(messagesQuery);
+          
+          stats[user.id] = {
+            messageCount: messagesSnapshot.size
+          };
+        } catch (error) {
+          console.error(`Error fetching stats for user ${user.id}:`, error);
+        }
+      }
+      setUserStats(stats);
+    };
+
+    if (users.length > 0) {
+      fetchUserStats();
+    }
+  }, [users, currentUser.id]);
+
+  useEffect(() => {
+    const unsubscribers = [];
+
+    messageUsers.forEach(user => {
+      const messageId = [currentUser.id, user.id].sort().join('_');
+      const q = query(
+        collection(firestore, `directMessages/${messageId}/messages`),
+        orderBy('createdAt')
+      );
+      
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unreadCount = snapshot.docs.filter(doc => {
+          const data = doc.data();
+          return !data.readBy?.includes(currentUser.id);
+        }).length;
+        
+        setUnreadCounts(prev => ({
+          ...prev,
+          [user.id]: unreadCount
+        }));
+      });
+
+      unsubscribers.push(unsubscribe);
+    });
+
+    // Cleanup listeners on unmount or when messageUsers changes
+    return () => {
+      unsubscribers.forEach(unsubscribe => unsubscribe());
+    };
+  }, [messageUsers, currentUser.id]);
 
   const calculateUnreadCounts = async (messageUsersData) => {
     const counts = {};
@@ -48,7 +119,7 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser, clearChannel 
         orderBy('createdAt')
       );
       const snapshot = await getDocs(q);
-      const unreadCount = snapshot.docs.filter(doc => !doc.data().readBy.includes(currentUser.id)).length;
+      const unreadCount = snapshot.docs.filter(doc => !doc.data().readBy?.includes(currentUser.id)).length;
       counts[user.id] = unreadCount;
     }
     setUnreadCounts(counts);
@@ -58,7 +129,6 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser, clearChannel 
     const messageId = [currentUser.id, user.id].sort().join('_');
     await setDoc(doc(firestore, `directMessages/${messageId}`), { createdAt: new Date() });
     setMessageUsers([...messageUsers, user]);
-    setModalIsOpen(false);
   };
 
   const toggleStatusVisibility = (userId) => {
@@ -76,7 +146,6 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser, clearChannel 
     if (typeof clearChannel === 'function') {
       clearChannel();
     }
-    
     onUserSelect(user);
   };
 
@@ -91,7 +160,12 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser, clearChannel 
           />
           Direct Messages
         </h2>
-        <FontAwesomeIcon icon={faPlus} onClick={() => setModalIsOpen(true)} className="plus-icon" style={{ fontSize: '1.2rem' }} />
+        <FontAwesomeIcon 
+          icon={faPlus} 
+          onClick={() => setModalIsOpen(true)} 
+          className="plus-icon" 
+          style={{ fontSize: '1.2rem' }} 
+        />
       </div>
       {!isCollapsed && (
         <ul>
@@ -102,27 +176,10 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser, clearChannel 
               className={`${selectedUser && selectedUser.id === user.id ? 'selected' : ''}`}
               style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             >
-              <span>{user.name}</span>
-              {user.status && (
-                <>
-                  {!visibleStatus[user.id] ? (
-                    <FontAwesomeIcon
-                      icon={faCommentDots}
-                      onClick={() => toggleStatusVisibility(user.id)}
-                      className="status-indicator"
-                      style={{ marginLeft: '8px', color: 'blue', cursor: 'pointer' }}
-                    />
-                  ) : (
-                    <span
-                      className="status-text"
-                      onClick={() => toggleStatusVisibility(user.id)}
-                      style={{ marginLeft: '8px', cursor: 'pointer' }}
-                    >
-                      {user.status}
-                    </span>
-                  )}
-                </>
-              )}
+              <div className="user-info-container">
+                <span className="user-name">{user.name}</span>
+                {user.status && <span className="user-status">[{user.status}]</span>}
+              </div>
               {unreadCounts[user.id] > 0 && (
                 <span className="unread-indicator">{unreadCounts[user.id]}</span>
               )}
@@ -130,23 +187,67 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser, clearChannel 
           ))}
         </ul>
       )}
+      
       <Modal
         isOpen={modalIsOpen}
         onRequestClose={() => setModalIsOpen(false)}
         contentLabel="Start New Direct Message"
-        className="modal"
-        overlayClassName="overlay"
+        className="channels-modal"
+        overlayClassName="modal-overlay"
       >
-        <h2>Start a New Direct Message</h2>
-        <ul>
-          {users.map(user => (
-            <li key={user.id}>
-              {user.name}
-              <button onClick={() => startNewMessage(user)}>Message</button>
-            </li>
-          ))}
-        </ul>
-        <button onClick={() => setModalIsOpen(false)}>Close</button>
+        <div className="channels-modal-content">
+          <h2>Start a New Conversation</h2>
+          
+          <div className="channels-list">
+            {users
+              .filter(user => user.id !== currentUser.id)
+              .map(user => (
+                <div key={user.id} className="channel-item">
+                  <div className="channel-info">
+                    <span className="channel-name">{user.name}</span>
+                    <div className="channel-stats">
+                      {userStats[user.id] && (
+                        <span>{userStats[user.id].messageCount} messages in conversation</span>
+                      )}
+                      {user.status && (
+                        <>
+                          <span>•</span>
+                          <span>Status: {user.status}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {messageUsers.some(u => u.id === user.id) ? (
+                    <button 
+                      onClick={() => {
+                        handleUserSelect(user);
+                        setModalIsOpen(false);
+                      }}
+                      className="join-button"
+                    >
+                      Message
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => {
+                        startNewMessage(user);
+                        setModalIsOpen(false);
+                      }}
+                      className="join-button"
+                    >
+                      Start Chat
+                    </button>
+                  )}
+                </div>
+              ))}
+          </div>
+
+          <div className="modal-buttons">
+            <button onClick={() => setModalIsOpen(false)} className="cancel">
+              Close
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
