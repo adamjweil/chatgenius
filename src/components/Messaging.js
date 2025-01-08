@@ -262,7 +262,7 @@ const Messaging = ({ currentUser }) => {
         handleUserSelect={handleUserSelect}
         handleLogout={handleLogout}
         status={status}
-        setStatusModalOpen={setStatusModalOpen}
+        setStatus={setStatus}
       />
       <div className="chat-area">
         {(selectedChannel || selectedUser) && (

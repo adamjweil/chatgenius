@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faCommentDots, faCaretDown, faCaretRight } from '@fortawesome/free-solid-svg-icons';
 import '../App.css';
 
-const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
+const DirectMessages = ({ currentUser, onUserSelect, selectedUser, clearChannel }) => {
   const [users, setUsers] = useState([]);
   const [messageUsers, setMessageUsers] = useState([]);
   const [unreadCounts, setUnreadCounts] = useState({});
@@ -72,6 +72,14 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
     setIsCollapsed(!isCollapsed);
   };
 
+  const handleUserSelect = (user) => {
+    if (typeof clearChannel === 'function') {
+      clearChannel();
+    }
+    
+    onUserSelect(user);
+  };
+
   return (
     <div>
       <div className="direct-messages-header">
@@ -90,7 +98,7 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser }) => {
           {messageUsers.map(user => (
             <li
               key={user.id}
-              onClick={() => onUserSelect(user)}
+              onClick={() => handleUserSelect(user)}
               className={`${selectedUser && selectedUser.id === user.id ? 'selected' : ''}`}
               style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             >
