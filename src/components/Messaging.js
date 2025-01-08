@@ -24,6 +24,7 @@ const Messaging = ({ currentUser }) => {
   const [showReplyInput, setShowReplyInput] = useState({});
   const [userNames, setUserNames] = useState({});
   const [channelFiles, setChannelFiles] = useState([]);
+  const [currentStreamer, setCurrentStreamer] = useState(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -266,48 +267,51 @@ const Messaging = ({ currentUser }) => {
         setStatus={setStatus}
       />
       <div className="chat-area">
-        {(selectedChannel || selectedUser) && (
-          <div className="chat-header">
-            <div className="chat-header-top">
-              <div className="header-left">
-                {selectedChannel && (
-                  <CameraSharing 
-                    currentUser={currentUser} 
-                    selectedChannel={selectedChannel} 
-                  />
-                )}
-              </div>
-              <h2>
-                {selectedChannel ? `#${selectedChannel.name}` : `Chat with ${selectedUser.name}`}
-              </h2>
-              <div className="header-right">
-                {selectedChannel && (
-                  <button onClick={leaveChannel} className="leave-channel-button">
-                    Leave Channel
-                  </button>
-                )}
-              </div>
+        <div className={`chat-header ${currentStreamer ? 'with-stream' : ''}`}>
+          <div className="chat-header-top">
+            <div className="header-left">
+              {selectedChannel && (
+                <CameraSharing 
+                  currentUser={currentUser} 
+                  selectedChannel={selectedChannel}
+                  setCurrentStreamer={setCurrentStreamer}
+                />
+              )}
+            </div>
+            <h2>
+              {selectedChannel 
+                ? `#${selectedChannel.name}` 
+                : selectedUser 
+                  ? `Chat with ${selectedUser.name}`
+                  : 'Select a channel or user'}
+            </h2>
+            <div className="header-right">
+              {selectedChannel && (
+                <button onClick={leaveChannel} className="leave-channel-button">
+                  Leave Channel
+                </button>
+              )}
             </div>
           </div>
-        )}
-        {selectedChannel && channelFiles.length > 0 && (
-          <div className="channel-files">
-            <h3>Files in this Channel:</h3>
-            <div className="file-chips">
-              {channelFiles.map((file, index) => (
-                <a
-                  key={index}
-                  href={file.fileURL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="file-chip"
-                >
-                  {file.fileName}
-                </a>
-              ))}
-            </div>
+        </div>
+        
+        <div className="files-section">
+          <h3>Files in this Channel:</h3>
+          <div className="files-list">
+            {channelFiles.map(file => (
+              <a 
+                key={file.fileName}
+                href={file.fileURL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="file-item"
+              >
+                {file.fileName}
+              </a>
+            ))}
           </div>
-        )}
+        </div>
+        
         <MessageList
           messages={messages}
           currentUser={currentUser}
