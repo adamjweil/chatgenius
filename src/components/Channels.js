@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, getDocs, doc, updateDoc, arrayUnion, getDoc, query, orderBy, onSnapshot, writeBatch } from 'firebase/firestore';
 import Modal from 'react-modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCog } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faCog, faCaretDown, faCaretRight } from '@fortawesome/free-solid-svg-icons';
 import { firestore } from '../firebase';
-import './Channels.css';
+import '../App.css';
+// import './Channels.css';
 
 Modal.setAppElement('#root');
 
@@ -20,6 +21,7 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
   const [directMessages, setDirectMessages] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [activeShares, setActiveShares] = useState({});
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     if (currentUser && currentUser.id) {
@@ -219,46 +221,45 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
     }
   };
 
-//   const sendMessage = async (e) => {
-//     e.preventDefault();
-//     const messageData = {
-//       text: newMessage,
-//       createdAt: new Date(),
-//       senderId: currentUser.id,
-//       senderName: currentUser.name,
-//       readBy: [],
-//     };
-
-//     if (selectedChannel) {
-//       await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages`), messageData);
-//     } else if (selectedUser) {
-//       const messageId = [currentUser.id, selectedUser.id].sort().join('_');
-//       await addDoc(collection(firestore, `directMessages/${messageId}/messages`), messageData);
-//     }
-//     setNewMessage('');
-//   };
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+  };
 
   return (
     <div>
       <div className="channels-header">
-        <h2>Channels</h2>
-        <FontAwesomeIcon icon={faCog} onClick={() => setModalIsOpen(true)} className="gear-icon" />
+        <h2>
+          <FontAwesomeIcon
+            icon={isCollapsed ? faCaretRight : faCaretDown}
+            onClick={toggleCollapse}
+            className="toggle-icon"
+          />
+          Channels
+        </h2>
+        <FontAwesomeIcon
+          icon={faPlus}
+          onClick={() => setModalIsOpen(true)}
+          className="plus-icon"
+          style={{ fontSize: '1.2rem' }}
+        />
       </div>
-      <ul>
-        {joinedChannels.map(channel => (
-          <li
-            key={channel.id}
-            onClick={() => handleChannelSelect(channel)}
-            className={`${activeChannel && activeChannel.id === channel.id ? 'selected' : ''}`}
-          >
-            #{channel.name}
-            {activeShares[channel.id] && <span className="active-share-indicator">•</span>}
-            {unreadCounts[channel.id] > 0 && (
-              <span className="unread-indicator">{unreadCounts[channel.id]}</span>
-            )}
-          </li>
-        ))}
-      </ul>
+      {!isCollapsed && (
+        <ul>
+          {joinedChannels.map(channel => (
+            <li
+              key={channel.id}
+              onClick={() => handleChannelSelect(channel)}
+              className={`${activeChannel && activeChannel.id === channel.id ? 'selected' : ''}`}
+            >
+              #{channel.name}
+              {activeShares[channel.id] && <span className="active-share-indicator">•</span>}
+              {unreadCounts[channel.id] > 0 && (
+                <span className="unread-indicator">{unreadCounts[channel.id]}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
       <ul>
         {directMessages.map(directMessage => (
           <li
