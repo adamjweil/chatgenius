@@ -330,7 +330,16 @@
 .status-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+}
+
+.status-text {
+  flex-grow: 1;
+}
+
+.edit-icon {
+  cursor: pointer;
+  margin-left: 5px;
 }
 
 .status span {
@@ -1324,16 +1333,35 @@
 .status-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+}
+
+.status-text {
+  flex-grow: 1;
+}
+
+.edit-icon {
+  cursor: pointer;
+  margin-left: 5px;
 }
 
 .status span {
   margin-bottom: 0;
 }
 
+.status button {
+  margin-left: 0.5rem;
+  background: none;
+  border: none;
+  color: #61dafb;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
 .edit-profile-modal {
-  width: 400px;
-  padding: 20px;
+  width: 800px;
+  height: 600px;
+  padding: 40px;
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -1414,6 +1442,89 @@
 
 .status-row span {
   color: #ffd700; /* Lighter yellow color */
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #ddd;
+}
+
+.tabs button {
+  background: none;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #555;
+  transition: color 0.3s, border-bottom 0.3s;
+  position: relative;
+}
+
+.tabs button.active {
+  color: #000;
+  font-weight: bold;
+}
+
+.tabs button::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 2px;
+  background: #000;
+  transition: width 0.3s;
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tabs button.active::after {
+  width: 100%;
+}
+
+.modal-label {
+  margin-top: 10px;
+  margin-bottom: 5px;
+  font-weight: bold;
+  display: block;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.modal-label {
+  margin-right: 10px;
+  font-weight: bold;
+  width: 120px; /* Adjust width as needed */
+}
+
+.modal-input {
+  flex: 1;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* Aligns items to the right */
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+}
+
+.status-text {
+  margin-right: 5px; /* Adds space between text and icon */
+}
+
+.edit-icon {
+  cursor: pointer;
+  margin-left: 5px; /* Adds space between name and icon */
 }
 
 

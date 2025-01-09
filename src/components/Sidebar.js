@@ -1,26 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Channels from './Channels';
 import DirectMessages from './DirectMessages';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 import { FiLogOut, FiEdit, FiEdit2 } from 'react-icons/fi';
 import StatusModal from './StatusModal';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { firestore } from '../firebase';
 import EditProfileModal from './EditProfileModal';
 
 const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSelect, handleUserSelect, handleLogout, status, setStatus }) => {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [userData, setUserData] = useState({ status: '', photoURL: '' });
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userRef = doc(firestore, 'users', currentUser.id);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          setUserData(userDoc.data());
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser.id]);
 
   const handleStatusSave = async (newStatus) => {
     try {
       const userRef = doc(firestore, 'users', currentUser.id);
       await updateDoc(userRef, { status: newStatus });
-      setStatus(newStatus); // Update the status in parent component
+      setUserData(prevData => ({ ...prevData, status: newStatus }));
       setIsStatusModalOpen(false);
     } catch (error) {
       console.error('Error updating status:', error);
+    }
+  };
+
+  const handleClearStatus = async () => {
+    try {
+      const userRef = doc(firestore, 'users', currentUser.id);
+      await updateDoc(userRef, { status: '' });
+      setUserData(prevData => ({ ...prevData, status: '' }));
+    } catch (error) {
+      console.error('Error clearing status:', error);
     }
   };
 
@@ -40,7 +67,7 @@ const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSele
       </div>
       <div className="user-info">
         <img
-          src={currentUser.photoURL}
+          src={userData.photoURL || 'default-avatar-url'}
           alt="Avatar"
           className="avatar"
           onError={(e) => {
@@ -49,21 +76,19 @@ const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSele
           }}
         />
         <div className="name-status">
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="name-row">
             <strong>{currentUser.name}</strong>
-            <FiEdit onClick={() => setIsEditProfileModalOpen(true)} style={{ cursor: 'pointer', marginLeft: '5px' }} />
+            <FiEdit
+              className="edit-icon"
+              onClick={() => setIsEditProfileModalOpen(true)}
+            />
           </div>
           <div className="status-row">
-            {status ? (
-              <>
-                <span>{status}</span>
-                <FiEdit2 onClick={() => setIsStatusModalOpen(true)} style={{ cursor: 'pointer' }} />
-              </>
-            ) : (
-              <button onClick={() => setIsStatusModalOpen(true)} className="set-status-button">
-                Set Status
-              </button>
-            )}
+            <span className="status-text">{userData.status}</span>
+            <FiEdit2
+              className="edit-icon"
+              onClick={() => setIsStatusModalOpen(true)}
+            />
           </div>
         </div>
       </div>
@@ -76,7 +101,8 @@ const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSele
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}
         onSave={handleStatusSave}
-        currentStatus={status}
+        currentStatus={userData.status}
+        onClear={handleClearStatus}
       />
 
       <EditProfileModal

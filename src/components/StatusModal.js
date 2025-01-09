@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-const StatusModal = ({ isOpen, onClose, onSave, currentStatus }) => {
+const StatusModal = ({ isOpen, onClose, onSave, currentStatus, onClear }) => {
   const [status, setStatus] = useState(currentStatus || '');
+
+  useEffect(() => {
+    setStatus(currentStatus || '');
+  }, [currentStatus]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -30,6 +34,9 @@ const StatusModal = ({ isOpen, onClose, onSave, currentStatus }) => {
             </button>
             <button type="submit" className="save">
               Save Status
+            </button>
+            <button type="button" className="clear" onClick={() => { onClear(); setStatus(''); }}>
+              Clear Status
             </button>
           </div>
         </form>
