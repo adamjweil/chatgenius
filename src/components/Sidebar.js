@@ -3,13 +3,15 @@ import Channels from './Channels';
 import DirectMessages from './DirectMessages';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
-import { FiLogOut } from 'react-icons/fi';
+import { FiLogOut, FiEdit, FiEdit2 } from 'react-icons/fi';
 import StatusModal from './StatusModal';
 import { doc, updateDoc } from 'firebase/firestore';
 import { firestore } from '../firebase';
+import EditProfileModal from './EditProfileModal';
 
 const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSelect, handleUserSelect, handleLogout, status, setStatus }) => {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
 
   const handleStatusSave = async (newStatus) => {
     try {
@@ -37,12 +39,32 @@ const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSele
         />
       </div>
       <div className="user-info">
-        <strong>{currentUser.name}</strong>
-        <div className="status">
-          <span>{status || "Set your status"}</span>
-          <button onClick={() => setIsStatusModalOpen(true)}>
-            {status ? "Change Status" : "Set Status"}
-          </button>
+        <img
+          src={currentUser.photoURL}
+          alt="Avatar"
+          className="avatar"
+          onError={(e) => {
+            e.target.onerror = null; // Prevents looping
+            e.target.src = 'default-avatar-url'; // Fallback image
+          }}
+        />
+        <div className="name-status">
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <strong>{currentUser.name}</strong>
+            <FiEdit onClick={() => setIsEditProfileModalOpen(true)} style={{ cursor: 'pointer', marginLeft: '5px' }} />
+          </div>
+          <div className="status-row">
+            {status ? (
+              <>
+                <span>{status}</span>
+                <FiEdit2 onClick={() => setIsStatusModalOpen(true)} style={{ cursor: 'pointer' }} />
+              </>
+            ) : (
+              <button onClick={() => setIsStatusModalOpen(true)} className="set-status-button">
+                Set Status
+              </button>
+            )}
+          </div>
         </div>
       </div>
       <button onClick={handleLogout} className="logout-button">
@@ -55,6 +77,12 @@ const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSele
         onClose={() => setIsStatusModalOpen(false)}
         onSave={handleStatusSave}
         currentStatus={status}
+      />
+
+      <EditProfileModal
+        isOpen={isEditProfileModalOpen}
+        onClose={() => setIsEditProfileModalOpen(false)}
+        currentUser={currentUser}
       />
     </div>
   );

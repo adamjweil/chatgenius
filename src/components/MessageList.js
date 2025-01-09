@@ -154,7 +154,7 @@ const MessageList = ({
           
           <div className="message-content">
             {message.text}
-            {message.fileURL && (
+            {selectedChannel && message.fileURL && (
               <div className="file-attachment">
                 <a href={message.fileURL} target="_blank" rel="noopener noreferrer">
                   {message.fileName}
