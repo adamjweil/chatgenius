@@ -295,22 +295,24 @@ const Messaging = ({ currentUser }) => {
           </div>
         </div>
         
-        <div className="files-section">
-          <h3>Files in this Channel:</h3>
-          <div className="files-list">
-            {channelFiles.map(file => (
-              <a 
-                key={file.fileName}
-                href={file.fileURL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="file-item"
-              >
-                {file.fileName}
-              </a>
-            ))}
+        {selectedChannel && (
+          <div className="files-section">
+            <h3>Files in this Channel:</h3>
+            <div className="files-list">
+              {channelFiles.map(file => (
+                <a 
+                  key={file.fileName}
+                  href={file.fileURL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="file-item"
+                >
+                  {file.fileName}
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         
         <MessageList
           messages={messages}
