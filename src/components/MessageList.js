@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart } from '@fortawesome/free-solid-svg-icons';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
-import { firestore } from '../firebase';
+import { firestore } from '../firebase.js';
 
 const MessageList = ({ 
   messages, 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, setDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { firestore } from '../firebase';
+import { firestore } from '../firebase.js';
 import Modal from 'react-modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faCommentDots, faCaretDown, faCaretRight } from '@fortawesome/free-solid-svg-icons';

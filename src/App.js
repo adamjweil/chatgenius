@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './firebase';
-import Login from './components/Login';
-import Register from './components/Register';
-import Messaging from './components/Messaging';
+import { auth } from './firebase.js';
+import Login from './components/Login.js';
+import Register from './components/Register.js';
+import Messaging from './components/Messaging.js';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
