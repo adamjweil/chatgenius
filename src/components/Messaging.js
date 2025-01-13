@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, arrayRemove, writeBatch, updateDoc, getDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
-import { auth, firestore } from '../firebase';
-import CameraSharing from './CameraSharing';
-import MessageList from './MessageList';
+import { auth, firestore } from '../firebase.js';
+import CameraSharing from './CameraSharing.js';
+import MessageList from './MessageList.js';
 import '../App.css';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperclip, faHeart } from '@fortawesome/free-solid-svg-icons';
-import Sidebar from './Sidebar';
+import Sidebar from './Sidebar.js';
 
 const Messaging = ({ currentUser }) => {
   const [messages, setMessages] = useState([]);

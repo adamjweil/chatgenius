@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
 import { updateDoc, doc } from 'firebase/firestore';
-import { firestore } from '../firebase';
+import { firestore } from '../firebase.js';
 
 const EditProfileModal = ({ isOpen, onClose, currentUser }) => {
   const [activeTab, setActiveTab] = useState('profile');

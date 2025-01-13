@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { firestore } from '../firebase';
+import { firestore } from '../firebase.js';
 
 const CameraSharing = ({ currentUser, selectedChannel }) => {
   const [isSharing, setIsSharing] = useState(false);

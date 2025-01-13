@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import Channels from './Channels';
-import DirectMessages from './DirectMessages';
+import Channels from './Channels.js';
+import DirectMessages from './DirectMessages.js';
 import { signOut } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth } from '../firebase.js';
 import { FiLogOut, FiEdit, FiEdit2 } from 'react-icons/fi';
-import StatusModal from './StatusModal';
+import StatusModal from './StatusModal.js';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { firestore } from '../firebase';
-import EditProfileModal from './EditProfileModal';
+import { firestore } from '../firebase.js';
+import EditProfileModal from './EditProfileModal.js';
 
 const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSelect, handleUserSelect, handleLogout, status, setStatus }) => {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);

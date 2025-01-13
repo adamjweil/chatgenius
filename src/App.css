@@ -115,10 +115,22 @@
   padding: 4px 20px 4px 8px;
   border-radius: 6px;
   transition: background-color 0.1s ease;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(224, 224, 224, 0.35);
+}
+
+.message:last-child {
+  border-bottom: none;
+}
+
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .message:hover {
-  background-color: #f8f9fa;
+  background-color: rgba(248, 249, 250, 0.5);
 }
 
 .message-header {
@@ -1511,6 +1523,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end; /* Aligns items to the right */
+  /* width: 1000px; */
 }
 
 .status-row {

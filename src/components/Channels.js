@@ -3,7 +3,7 @@ import { collection, addDoc, getDocs, doc, updateDoc, arrayUnion, getDoc, query,
 import Modal from 'react-modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faCog, faCaretDown, faCaretRight } from '@fortawesome/free-solid-svg-icons';
-import { firestore } from '../firebase';
+import { firestore } from '../firebase.js';
 import '../App.css';
 // import './Channels.css';
 
