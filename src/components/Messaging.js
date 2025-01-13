@@ -10,12 +10,20 @@ import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperclip, faHeart } from '@fortawesome/free-solid-svg-icons';
 import Sidebar from './Sidebar.js';
+import AIChatbot from './AIChatbot.js';
+import MessageInput from './MessageInput.js';
 
-const Messaging = ({ currentUser }) => {
+
+const Messaging = ({ 
+  currentUser, 
+  selectedChannel, 
+  selectedUser, 
+  handleChannelSelect,
+  handleUserSelect,
+//   handleLogout
+}) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [selectedChannel, setSelectedChannel] = useState(null);
-  const [selectedUser, setSelectedUser] = useState(null);
   const [file, setFile] = useState(null);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [newStatus, setNewStatus] = useState('');
@@ -47,54 +55,38 @@ const Messaging = ({ currentUser }) => {
   }, [currentUser]);
 
   useEffect(() => {
+    let unsubscribe = () => {};
+
     if (selectedChannel) {
       const q = query(
         collection(firestore, `channels/${selectedChannel.id}/messages`),
         orderBy('createdAt')
       );
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
-          };
-        });
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const messagesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
         setMessages(messagesData);
-        setChannelFiles(messagesData.filter(msg => msg.fileURL).map(msg => ({
-          fileName: msg.fileName,
-          fileURL: msg.fileURL
-        })));
-        markMessagesAsRead(messagesData, `channels/${selectedChannel.id}/messages`);
       });
-
-      return () => unsubscribe();
     } else if (selectedUser) {
-      const messageId = [currentUser.id, selectedUser.id].sort().join('_');
       const q = query(
-        collection(firestore, `directMessages/${messageId}/messages`),
+        collection(firestore, 'directMessages'),
         orderBy('createdAt')
       );
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
-          };
-        });
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const messagesData = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(msg => 
+            (msg.senderId === currentUser.id && msg.recipientId === selectedUser.id) ||
+            (msg.senderId === selectedUser.id && msg.recipientId === currentUser.id)
+          );
         setMessages(messagesData);
-        markMessagesAsRead(messagesData, `directMessages/${messageId}/messages`);
       });
-
-      return () => unsubscribe();
-    } else {
-      setMessages([]); // Clear messages if no channel or user is selected
-      setChannelFiles([]); // Clear files if no channel is selected
     }
-  }, [selectedChannel, selectedUser]);
+
+    return () => unsubscribe();
+  }, [selectedChannel, selectedUser, currentUser.id]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -177,16 +169,6 @@ const Messaging = ({ currentUser }) => {
     }
   };
 
-  const handleChannelSelect = (channel) => {
-    setSelectedChannel(channel);
-    setSelectedUser(null);
-  };
-
-  const handleUserSelect = (user) => {
-    setSelectedUser(user);
-    setSelectedChannel(null);
-  };
-
   const markMessagesAsRead = async (messages, path) => {
     const batch = writeBatch(firestore);
     messages.forEach(message => {
@@ -246,12 +228,65 @@ const Messaging = ({ currentUser }) => {
       await updateDoc(userRef, {
         joinedChannels: arrayRemove({ id: selectedChannel.id, name: selectedChannel.name })
       });
-
-      setSelectedChannel(null);
+      
       console.log('Left the channel');
     } catch (error) {
       console.error("Error leaving channel:", error);
     }
+  };
+
+  const handleKeyPress = async (e) => {
+    if (e.key === 'Enter' && newMessage.trim()) {
+      e.preventDefault();
+      
+      try {
+        const messageData = {
+          text: newMessage,
+          senderId: currentUser.id,
+          senderName: currentUser.name,
+          createdAt: new Date(),
+          likes: [],
+          readBy: [currentUser.id]
+        };
+
+        if (selectedChannel) {
+          messageData.channelId = selectedChannel.id;
+          await addDoc(collection(firestore, 'channels', selectedChannel.id, 'messages'), messageData);
+        } else if (selectedUser) {
+          // Handle direct message
+          messageData.recipientId = selectedUser.id;
+          await addDoc(collection(firestore, 'directMessages'), messageData);
+        }
+
+        setNewMessage('');
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
+    }
+  };
+
+  const renderContent = () => {
+    if (selectedChannel && selectedChannel.name === 'ai-chatbot') {
+      return <AIChatbot currentUser={currentUser} />;
+    }
+
+    return (
+      <MessageList
+        messages={messages}
+        currentUser={currentUser}
+        selectedChannel={selectedChannel}
+        selectedUser={selectedUser}
+        handleLike={handleLike}
+        expandedThreads={expandedThreads}
+        showReplyInput={showReplyInput}
+        toggleThread={toggleThread}
+        toggleReplyInput={toggleReplyInput}
+        handleReply={handleReply}
+        userNames={userNames}
+        fetchUserNames={fetchUserNames}
+        onSendMessage={handleKeyPress}
+      />
+    );
   };
 
   return (
@@ -263,8 +298,6 @@ const Messaging = ({ currentUser }) => {
         handleChannelSelect={handleChannelSelect}
         handleUserSelect={handleUserSelect}
         handleLogout={handleLogout}
-        status={status}
-        setStatus={setStatus}
       />
       <div className="chat-area">
         <div className={`chat-header ${currentStreamer ? 'with-stream' : ''}`}>
@@ -314,20 +347,7 @@ const Messaging = ({ currentUser }) => {
           </div>
         )}
         
-        <MessageList
-          messages={messages}
-          currentUser={currentUser}
-          selectedChannel={selectedChannel}
-          selectedUser={selectedUser}
-          handleLike={handleLike}
-          expandedThreads={expandedThreads}
-          showReplyInput={showReplyInput}
-          toggleThread={toggleThread}
-          toggleReplyInput={toggleReplyInput}
-          handleReply={handleReply}
-          userNames={userNames}
-          fetchUserNames={fetchUserNames}
-        />
+        {renderContent()}
         {(selectedChannel || selectedUser) && (
           <form onSubmit={sendMessage} className="message-form">
             <div className="input-container">

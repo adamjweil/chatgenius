@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, doc, updateDoc, arrayUnion, getDoc, query, orderBy, onSnapshot, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, updateDoc, arrayUnion, getDoc, query, orderBy, onSnapshot, writeBatch, arrayRemove, where } from 'firebase/firestore';
 import Modal from 'react-modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faCog, faCaretDown, faCaretRight } from '@fortawesome/free-solid-svg-icons';
 import { firestore } from '../firebase.js';
 import '../App.css';
-// import './Channels.css';
 
-Modal.setAppElement('#root');
-
-const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedChannel, clearDirectMessage }) => {
+const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedChannel, clearDirectMessage, handleUserSelect }) => {
   const [channelName, setChannelName] = useState('');
   const [channels, setChannels] = useState([]);
   const [joinedChannels, setJoinedChannels] = useState([]);
@@ -18,7 +15,6 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
   const [unreadCounts, setUnreadCounts] = useState({});
   const [activeChannel, setActiveChannel] = useState(null);
   const [activeDirectMessage, setActiveDirectMessage] = useState(null);
-  const [selectedChannel, setSelectedChannel] = useState(null);
   const [activeShares, setActiveShares] = useState({});
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [channelStats, setChannelStats] = useState({});
@@ -56,9 +52,9 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
   }, [activeChannel]);
 
   useEffect(() => {
-    if (selectedChannel) {
+    if (propSelectedChannel) {
       const q = query(
-        collection(firestore, `channels/${selectedChannel.id}/messages`),
+        collection(firestore, `channels/${propSelectedChannel.id}/messages`),
         orderBy('createdAt')
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -71,7 +67,7 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
 
       return () => unsubscribe();
     }
-  }, [selectedChannel]);
+  }, [propSelectedChannel]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(firestore, 'channels'), (snapshot) => {
@@ -174,6 +170,36 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
     }
   }, [channels]);
 
+  useEffect(() => {
+    // Create AI Chatbot channel if it doesn't exist
+    const createAIChatbotChannel = async () => {
+      const channelsRef = collection(firestore, 'channels');
+      const q = query(channelsRef, where('name', '==', 'ai-chatbot'));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        const aiChannelRef = await addDoc(channelsRef, {
+          name: 'ai-chatbot',
+          description: 'Ask questions about chat history',
+          createdAt: new Date(),
+          isAIChannel: true,
+          isDefault: true
+        });
+
+        // Auto-join all users to AI channel
+        const userRef = doc(firestore, 'users', currentUser.id);
+        await updateDoc(userRef, {
+          joinedChannels: arrayUnion({
+            id: aiChannelRef.id,
+            name: 'ai-chatbot'
+          })
+        });
+      }
+    };
+
+    createAIChatbotChannel();
+  }, [currentUser.id]);
+
   const fetchChannels = async () => {
     try {
       const querySnapshot = await getDocs(collection(firestore, 'channels'));
@@ -273,10 +299,9 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
   };
 
   const handleChannelSelect = async (channel) => {
+    console.log('Channel selected:', channel);
     setActiveChannel(channel);
-    setSelectedChannel(channel);
     
-    // Clear any active direct message
     if (typeof clearDirectMessage === 'function') {
       clearDirectMessage();
     }
@@ -291,10 +316,8 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
       const batch = writeBatch(firestore);
       let needsUpdate = false;
       
-      // Mark all messages as read
       snapshot.docs.forEach(doc => {
         const data = doc.data();
-        // Initialize readBy array if it doesn't exist
         if (!data.readBy) {
           needsUpdate = true;
           batch.update(doc.ref, {
@@ -308,7 +331,6 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
         }
       });
       
-      // Only commit batch if there are updates needed
       if (needsUpdate) {
         await batch.commit();
       }
@@ -319,7 +341,10 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
       }));
 
       if (typeof onChannelSelect === 'function') {
+        console.log('Calling onChannelSelect with:', channel);
         onChannelSelect(channel);
+      } else {
+        console.log('onChannelSelect is not a function');
       }
     } catch (error) {
       console.error("Error marking messages as read:", error);
@@ -332,7 +357,6 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
 
   const leaveChannel = async (channel) => {
     try {
-      // Remove channel from user's joinedChannels in Firestore
       const userRef = doc(firestore, 'users', currentUser.id);
       const userDoc = await getDoc(userRef);
       const userData = userDoc.data();
@@ -345,26 +369,37 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
         joinedChannels: updatedJoinedChannels
       });
 
-      // Update local state immediately
       setJoinedChannels(prevChannels => 
         prevChannels.filter(ch => ch.id !== channel.id)
       );
 
-      // If user is currently in this channel, clear it
-      if (selectedChannel && selectedChannel.id === channel.id) {
-        setSelectedChannel(null);
+      if (propSelectedChannel && propSelectedChannel.id === channel.id) {
         setActiveChannel(null);
         if (typeof onChannelSelect === 'function') {
           onChannelSelect(null);
         }
       }
 
-      // Close the modal after leaving
       setModalIsOpen(false);
-      
     } catch (error) {
       console.error('Error leaving channel:', error);
     }
+  };
+
+  const handleChannelClick = (channel) => {
+    console.log('Channel clicked:', channel);
+    console.log('onChannelSelect type:', typeof onChannelSelect);
+    
+    if (typeof onChannelSelect !== 'function') {
+      console.error('onChannelSelect is not a function in Channels component');
+      return;
+    }
+
+    setActiveChannel(channel);
+    if (typeof handleUserSelect === 'function') {
+      handleUserSelect(null);
+    }
+    onChannelSelect(channel);
   };
 
   return (
@@ -390,9 +425,10 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
           {joinedChannels.map(channel => (
             <li
               key={channel.id}
-              onClick={() => handleChannelSelect(channel)}
+              onClick={() => handleChannelClick(channel)}
               className={`
-                ${activeChannel && activeChannel.id === channel.id ? 'selected' : ''}
+                channel-item
+                ${propSelectedChannel && propSelectedChannel.id === channel.id ? 'selected' : ''}
                 ${unreadCounts[channel.id] > 0 ? 'unread' : ''}
               `}
               style={{ 

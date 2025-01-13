@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { firestore } from '../firebase.js';
 
@@ -17,10 +17,11 @@ const MessageList = ({
   toggleReplyInput,
   handleReply,
   userNames,
-  fetchUserNames 
+  fetchUserNames,
+  onSendMessage
 }) => {
-  // Add currentStreamer state
   const [currentStreamer, setCurrentStreamer] = useState(null);
+  const [messageText, setMessageText] = useState('');
 
   // Listen for streamer changes
   useEffect(() => {
@@ -35,6 +36,25 @@ const MessageList = ({
       return () => unsubscribe();
     }
   }, [selectedChannel]);
+
+  // Add timestamp formatting helper
+  const formatTimestamp = (timestamp) => {
+    try {
+      // Check if timestamp is a Firebase Timestamp
+      if (timestamp && typeof timestamp.toDate === 'function') {
+        return format(timestamp.toDate(), 'p');
+      }
+      // Check if timestamp is a Date object or can be converted to one
+      const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+      if (!isNaN(date.getTime())) {
+        return format(date, 'p');
+      }
+      return 'No timestamp';
+    } catch (error) {
+      console.error('Error formatting timestamp:', error, timestamp);
+      return 'Invalid date';
+    }
+  };
 
   // Thread component functionality
   const Thread = ({ messageId, channelId }) => {
@@ -65,7 +85,7 @@ const MessageList = ({
             <strong>{reply.senderName}</strong>
             {reply.text}
             <div className="reply-info">
-              {format(new Date(reply.createdAt), 'p')}
+              {formatTimestamp(reply.createdAt)}
             </div>
           </div>
         ))}
@@ -132,76 +152,100 @@ const MessageList = ({
     );
   };
 
-  return (
-    <div className={`messages ${currentStreamer && currentStreamer !== currentUser.id ? 'viewing-stream' : ''}`}>
-      {messages.map(message => (
-        <div
-          key={message.id}
-          className={`message ${
-            selectedChannel 
-              ? 'channel-message' 
-              : message.senderId === currentUser.id 
-                ? 'my-message' 
-                : 'other-message'
-          }`}
-        >
-          <div className="message-header">
-            <strong>{message.senderName}</strong>
-            <span className="message-timestamp">
-              {format(new Date(message.createdAt), 'p')}
-            </span>
-          </div>
-          
-          <div className="message-content">
-            {message.text}
-            {selectedChannel && message.fileURL && (
-              <div className="file-attachment">
-                <a href={message.fileURL} target="_blank" rel="noopener noreferrer">
-                  {message.fileName}
-                </a>
-              </div>
-            )}
-          </div>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (messageText.trim()) {
+      await onSendMessage(messageText);
+      setMessageText('');
+    }
+  };
 
-          <div className="message-actions">
-            <div className="like-section">
-              <button onClick={() => handleLike(message.id, selectedChannel ? 
-                `channels/${selectedChannel.id}/messages` : 
-                `directMessages/${[currentUser.id, selectedUser.id].sort().join('_')}/messages`)}>
-                <FontAwesomeIcon icon={faHeart} />
-              </button>
-              {message.likes && message.likes.map((like, index) => (
-                <span
-                  key={index}
-                  onMouseEnter={() => fetchUserNames(message.likes)}
-                  title={message.likes.map(userId => userNames[userId]).join(', ')}
-                >
-                  <FontAwesomeIcon icon={faHeart} style={{ color: 'red', marginLeft: '4px' }} />
-                </span>
-              ))}
+  return (
+    <div className="messages-container">
+      <div className={`messages ${currentStreamer && currentStreamer !== currentUser.id ? 'viewing-stream' : ''}`}>
+        {messages.map(message => (
+          <div
+            key={message.id}
+            className={`message ${
+              selectedChannel 
+                ? 'channel-message' 
+                : message.senderId === currentUser.id 
+                  ? 'my-message' 
+                  : 'other-message'
+            }`}
+          >
+            <div className="message-header">
+              <strong>{message.senderName}</strong>
+              <span className="message-timestamp">
+                {formatTimestamp(message.createdAt)}
+              </span>
             </div>
-            {selectedChannel && (
-              <RepliesButton
+            
+            <div className="message-content">
+              {message.text}
+              {selectedChannel && message.fileURL && (
+                <div className="file-attachment">
+                  <a href={message.fileURL} target="_blank" rel="noopener noreferrer">
+                    {message.fileName}
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="message-actions">
+              <div className="like-section">
+                <button onClick={() => handleLike(message.id, selectedChannel ? 
+                  `channels/${selectedChannel.id}/messages` : 
+                  `directMessages/${[currentUser.id, selectedUser.id].sort().join('_')}/messages`)}>
+                  <FontAwesomeIcon icon={faHeart} />
+                </button>
+                {message.likes && message.likes.map((like, index) => (
+                  <span
+                    key={index}
+                    onMouseEnter={() => fetchUserNames(message.likes)}
+                    title={message.likes.map(userId => userNames[userId]).join(', ')}
+                  >
+                    <FontAwesomeIcon icon={faHeart} style={{ color: 'red', marginLeft: '4px' }} />
+                  </span>
+                ))}
+              </div>
+              {selectedChannel && (
+                <RepliesButton
+                  messageId={message.id}
+                  channelId={selectedChannel.id}
+                  toggleThread={toggleThread}
+                  toggleReplyInput={toggleReplyInput}
+                />
+              )}
+            </div>
+
+            {expandedThreads[message.id] && selectedChannel && (
+              <Thread
                 messageId={message.id}
                 channelId={selectedChannel.id}
-                toggleThread={toggleThread}
-                toggleReplyInput={toggleReplyInput}
+                onReply={handleReply}
               />
             )}
+            {showReplyInput[message.id] && (
+              <ReplyForm onReply={(text) => handleReply(message.id, text)} />
+            )}
           </div>
-
-          {expandedThreads[message.id] && selectedChannel && (
-            <Thread
-              messageId={message.id}
-              channelId={selectedChannel.id}
-              onReply={handleReply}
-            />
-          )}
-          {showReplyInput[message.id] && (
-            <ReplyForm onReply={(text) => handleReply(message.id, text)} />
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
+      <form onSubmit={handleSubmit} className="message-input-container">
+        <input
+          type="text"
+          value={messageText}
+          onChange={(e) => setMessageText(e.target.value)}
+          placeholder={selectedChannel?.id === 'ai-chatbot' 
+            ? "Ask me anything about the chat history..." 
+            : "Type a message..."}
+          className="message-input"
+        />
+        <button type="submit" className="send-button">
+          <FontAwesomeIcon icon={faPaperPlane} />
+        </button>
+      </form>
     </div>
   );
 };

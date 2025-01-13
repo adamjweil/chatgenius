@@ -1540,4 +1540,71 @@
   margin-left: 5px; /* Adds space between name and icon */
 }
 
+/* Message Input Styles */
+.message-input-container {
+  display: flex;
+  padding: 15px;
+  background-color: #fff;
+  border-top: 1px solid #e6e6e6;
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+}
+
+.message-input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+  margin-right: 10px;
+  font-size: 14px;
+}
+
+.send-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.send-button:hover {
+  background-color: #0056b3;
+}
+
+.send-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.ai-chatbot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e6e6e6;
+  background-color: #f8f9fa;
+}
+
+.clear-chat-button {
+  padding: 8px 16px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.clear-chat-button:hover {
+  background-color: #c82333;
+}
+
+.clear-chat-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
 
