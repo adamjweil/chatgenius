@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, orderBy, onSnapshot, getDocs, deleteDoc } from 'firebase/firestore';
 import { firestore } from '../firebase.js';
+import openai from '../services/openai.js';
 import { queryVectorDB } from '../services/vectorService.js';
 import MessageList from './MessageList.js';
 
@@ -82,7 +83,7 @@ const AIChatbot = ({ currentUser }) => {
     
     setIsLoading(true);
     try {
-      // First, add the user's message to Firestore
+      // Add the user's message to Firestore
       const userMessageRef = await addDoc(collection(firestore, 'channels/ai-chatbot/messages'), {
         text,
         senderId: currentUser.id,
@@ -93,32 +94,50 @@ const AIChatbot = ({ currentUser }) => {
       });
 
       try {
-        // Then query the vector DB and generate AI response
+        // First, search for relevant messages in the vector DB
         const relevantMessages = await queryVectorDB(text);
-        console.log('Relevant messages:', relevantMessages);
+        console.log('Relevant messages found:', relevantMessages);
+
+        // Prepare context from relevant messages
+        let context = "";
+        if (relevantMessages && relevantMessages.length > 0) {
+          context = relevantMessages
+            .filter(msg => msg.score > 0.7) // Only use reasonably relevant messages
+            .map(msg => `Message from ${msg.metadata.senderName}: "${msg.metadata.text}"`)
+            .join('\n');
+        }
+
+        // Get AI response using ChatGPT with context
+        const completion = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: "You are a helpful assistant with access to chat history. When answering questions, use the provided chat context if relevant. If the context doesn't help answer the question, provide a general response."
+            },
+            {
+              role: "user",
+              content: `Context from chat history:\n${context}\n\nQuestion: ${text}`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 500
+        });
+
+        const aiResponse = completion.choices[0].message.content;
 
         // Add the AI's response to Firestore
         await addDoc(collection(firestore, 'channels/ai-chatbot/messages'), {
-          text: relevantMessages.length > 0 
-            ? `Based on the chat history, here's what I found: ${relevantMessages.map(match => match.metadata.text).join('\n')}` 
-            : "I couldn't find any relevant information in the chat history.",
+          text: aiResponse,
           senderId: 'ai-bot',
           senderName: 'AI Assistant',
           createdAt: new Date(),
           channelId: 'ai-chatbot',
           isAI: true
         });
-      } catch (vectorError) {
-        console.error('Error with vector search:', vectorError);
-        // Send an error response
-        await addDoc(collection(firestore, 'channels/ai-chatbot/messages'), {
-          text: "I'm having trouble searching the chat history right now. Please try again later.",
-          senderId: 'ai-bot',
-          senderName: 'AI Assistant',
-          createdAt: new Date(),
-          channelId: 'ai-chatbot',
-          isAI: true
-        });
+      } catch (aiError) {
+        console.error('Error getting AI response:', aiError);
+        // Handle error response
       }
     } catch (error) {
       console.error('Error in AI chat:', error);

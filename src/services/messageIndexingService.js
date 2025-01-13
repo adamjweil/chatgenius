@@ -2,6 +2,8 @@ import { collection, query, orderBy, onSnapshot, getDocs } from 'firebase/firest
 import { firestore } from '../firebase.js';
 import { indexMessage } from './vectorService.js';
 
+const AI_CHATBOT_CHANNEL_ID = 'ai-chatbot'; // Define the channel ID to exclude
+
 const formatTimestamp = (timestamp) => {
   if (!timestamp) return new Date().toISOString();
   
@@ -35,6 +37,9 @@ const getAllChannelMessages = async () => {
     let allMessages = [];
 
     for (const channelDoc of channelsSnapshot.docs) {
+      // Skip the AI chatbot channel
+      if (channelDoc.id === AI_CHATBOT_CHANNEL_ID) continue;
+
       const messagesSnapshot = await getDocs(
         query(
           collection(firestore, `channels/${channelDoc.id}/messages`),
@@ -98,6 +103,9 @@ export const startMessageIndexing = () => {
   
   const unsubscribeChannels = onSnapshot(channelsRef, (channelsSnapshot) => {
     channelsSnapshot.docs.forEach(channelDoc => {
+      // Skip the AI chatbot channel
+      if (channelDoc.id === AI_CHATBOT_CHANNEL_ID) return;
+
       const messagesRef = collection(firestore, `channels/${channelDoc.id}/messages`);
       const q = query(messagesRef, orderBy('createdAt', 'desc'));
       
@@ -114,7 +122,7 @@ export const startMessageIndexing = () => {
                   messageId,
                   senderId: message.senderId,
                   senderName: message.senderName,
-                  timestamp: formatTimestamp(message.createdAt), // Format timestamp
+                  timestamp: formatTimestamp(message.createdAt),
                   channelId: channelDoc.id
                 });
                 console.log('Successfully indexed new message:', messageId);
