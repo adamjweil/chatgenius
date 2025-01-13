@@ -83,4 +83,20 @@ export const queryVectorDB = async (query) => {
     console.error('Error in queryVectorDB:', error);
     throw error;
   }
+};
+
+export const clearPineconeIndex = async () => {
+  try {
+    console.log('Starting to clear Pinecone index...');
+    const pinecone = await initPinecone();
+    const index = pinecone.index(process.env.REACT_APP_PINECONE_INDEX);
+    
+    // Delete all vectors from the index
+    await index.deleteAll();
+    
+    console.log('Successfully cleared Pinecone index');
+  } catch (error) {
+    console.error('Error clearing Pinecone index:', error);
+    throw error;
+  }
 }; 

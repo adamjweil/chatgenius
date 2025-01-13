@@ -32,14 +32,18 @@
 }
 
 .sidebar li {
-  padding-left: 10px;
-  margin-bottom: 0.5rem;
+  padding: 4px 10px;
+  margin-bottom: 2px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: color 0.3s;
+  color: #ccc;
+  background-color: #3f0e40;
+  border-radius: 0;
 }
 
 .sidebar li:hover {
-  background-color: #f0f0f0;
+  background-color: #3f0e40;
+  color: white;
 }
 
 /* Channel & DM Styles */
@@ -73,8 +77,11 @@
 }
 
 .selected, .unread {
-  border-left: 4px solid blue;
+  border-left: 2px solid #fff;
+  color: white !important;
   font-weight: bold;
+  background-color: #3f0e40;
+  border-radius: 0;
 }
 
 .unread-indicator {
