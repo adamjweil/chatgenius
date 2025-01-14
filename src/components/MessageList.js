@@ -232,20 +232,20 @@ const MessageList = ({
           </div>
         ))}
       </div>
-      <form onSubmit={handleSubmit} className="message-input-container">
-        <input
-          type="text"
-          value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
-          placeholder={selectedChannel?.id === 'ai-chatbot' 
-            ? "Ask me anything about the chat history..." 
-            : "Type a message..."}
-          className="message-input"
-        />
-        <button type="submit" className="send-button">
-          <FontAwesomeIcon icon={faPaperPlane} />
-        </button>
-      </form>
+      {selectedChannel?.id === 'ai-chatbot' && (
+        <form onSubmit={handleSubmit} className="message-input-container">
+          <input
+            type="text"
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            placeholder="Ask me anything about the chat history..."
+            className="message-input"
+          />
+          <button type="submit" className="send-button">
+            <FontAwesomeIcon icon={faPaperPlane} />
+          </button>
+        </form>
+      )}
     </div>
   );
 };

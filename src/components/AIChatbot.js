@@ -102,7 +102,7 @@ const AIChatbot = ({ currentUser }) => {
         let context = "";
         if (relevantMessages && relevantMessages.length > 0) {
           context = relevantMessages
-            .filter(msg => msg.score > 0.7) // Only use reasonably relevant messages
+            .filter(msg => msg.score > 0.5) // Only use reasonably relevant messages
             .map(msg => `Message from ${msg.metadata.senderName}: "${msg.metadata.text}"`)
             .join('\n');
         }
@@ -113,7 +113,7 @@ const AIChatbot = ({ currentUser }) => {
           messages: [
             {
               role: "system",
-              content: "You are a helpful assistant with access to chat history. When answering questions, use the provided chat context if relevant. If the context doesn't help answer the question, provide a general response."
+              content: "You are a helpful assistant with access to our companies entire chat history. When answering questions, always use the chat history to answer the question. If there is no answer to the question based on the context, provide a general response."
             },
             {
               role: "user",

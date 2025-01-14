@@ -75,10 +75,16 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
         id: doc.id,
         ...doc.data(),
       }));
-      setChannels(channelsData);
+
+      // Remove duplicates by creating a Map with unique IDs
+      const uniqueChannels = Array.from(
+        new Map(channelsData.map(channel => [channel.id, channel])).values()
+      );
+
+      setChannels(uniqueChannels);
 
       const shares = {};
-      channelsData.forEach(channel => {
+      uniqueChannels.forEach(channel => {
         if (channel.currentStreamer) {
           shares[channel.id] = true;
         }
@@ -171,8 +177,11 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
   }, [channels]);
 
   useEffect(() => {
-    // Create AI Chatbot channel if it doesn't exist
+    let isChannelCreated = false;
+
     const createAIChatbotChannel = async () => {
+      if (isChannelCreated) return;
+
       const channelsRef = collection(firestore, 'channels');
       const q = query(channelsRef, where('name', '==', 'ai-chatbot'));
       const querySnapshot = await getDocs(q);
@@ -195,6 +204,8 @@ const Channels = ({ onChannelSelect, currentUser, selectedChannel: propSelectedC
           })
         });
       }
+
+      isChannelCreated = true;
     };
 
     createAIChatbotChannel();

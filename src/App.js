@@ -6,7 +6,7 @@ import Login from './components/Login.js';
 import Register from './components/Register.js';
 import Messaging from './components/Messaging.js';
 import { startMessageIndexing } from './services/messageIndexingService.js';
-import { initPinecone, clearPineconeIndex } from './services/vectorService.js';
+import { initPinecone } from './services/vectorService.js';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -97,7 +97,6 @@ const App = () => {
           } 
         />
       </Routes>
-      <button onClick={() => clearPineconeIndex()}>Clear Pinecone Index</button>
     </Router>
   );
 };

@@ -94,10 +94,7 @@ const Messaging = ({
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!currentUser.name) {
-      console.error('Sender name is missing');
-      return;
-    }
+    if (!newMessage.trim()) return;
 
     const messageData = {
       text: newMessage,
@@ -105,26 +102,31 @@ const Messaging = ({
       senderId: currentUser.id,
       senderName: currentUser.name,
       readBy: [currentUser.id],
-      likes: [], // Initialize likes as an empty array
+      likes: [],
     };
 
-    if (file) {
-      const storage = getStorage();
-      const storageRef = ref(storage, `uploads/${file.name}`);
-      await uploadBytes(storageRef, file);
-      const fileURL = await getDownloadURL(storageRef);
-      messageData.fileURL = fileURL;
-      messageData.fileName = file.name;
-      setFile(null);
-    }
+    try {
+      if (file) {
+        const storage = getStorage();
+        const storageRef = ref(storage, `uploads/${file.name}`);
+        await uploadBytes(storageRef, file);
+        const fileURL = await getDownloadURL(storageRef);
+        messageData.fileURL = fileURL;
+        messageData.fileName = file.name;
+        setFile(null);
+      }
 
-    if (selectedChannel) {
-      await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages`), messageData);
-    } else if (selectedUser) {
-      const messageId = [currentUser.id, selectedUser.id].sort().join('_');
-      await addDoc(collection(firestore, `directMessages/${messageId}/messages`), messageData);
+      if (selectedChannel) {
+        await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages`), messageData);
+      } else if (selectedUser) {
+        const messageId = [currentUser.id, selectedUser.id].sort().join('_');
+        await addDoc(collection(firestore, `directMessages/${messageId}/messages`), messageData);
+      }
+
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
-    setNewMessage('');
   };
 
   const handleLike = async (messageId, path) => {
@@ -348,7 +350,7 @@ const Messaging = ({
         )}
         
         {renderContent()}
-        {(selectedChannel || selectedUser) && (
+        {(selectedChannel && selectedChannel.name !== 'ai-chatbot') || selectedUser ? (
           <form onSubmit={sendMessage} className="message-form">
             <div className="input-container">
               <label htmlFor="file-input" className="file-icon">
@@ -369,7 +371,7 @@ const Messaging = ({
               <button type="submit" className="send-button">Send</button>
             </div>
           </form>
-        )}
+        ) : null}
       </div>
       {statusModalOpen && (
         <div className="status-modal">
