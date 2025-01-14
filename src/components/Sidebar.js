@@ -8,6 +8,8 @@ import StatusModal from './StatusModal.js';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { firestore } from '../firebase.js';
 import EditProfileModal from './EditProfileModal.js';
+import { clearPineconeIndex } from '../services/vectorService.js'; // Import here
+
 
 const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSelect, handleUserSelect, handleLogout, status, setStatus }) => {
   console.log('Sidebar - handleChannelSelect type:', typeof handleChannelSelect);
@@ -88,7 +90,7 @@ const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSele
             alt="Avatar"
             className="avatar"
             onError={handleAvatarError}
-            key={userData.photoURL} // Add key to force re-render when URL changes
+            key={userData.photoURL}
           />
         ) : (
           <img
@@ -117,6 +119,9 @@ const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSele
       <button onClick={handleLogout} className="logout-button">
         <FiLogOut color="white" size={16} />
         Logout
+      </button>
+      <button onClick={() => clearPineconeIndex()} className="clear-index-button">
+        Clear Pinecone Index
       </button>
 
       <StatusModal
