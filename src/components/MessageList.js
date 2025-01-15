@@ -163,74 +163,79 @@ const MessageList = ({
   return (
     <div className="messages-container">
       <div className={`messages ${currentStreamer && currentStreamer !== currentUser.id ? 'viewing-stream' : ''}`}>
-        {messages.map(message => (
-          <div
-            key={message.id}
-            className={`message ${
-              selectedChannel 
-                ? 'channel-message' 
-                : message.senderId === currentUser.id 
-                  ? 'my-message' 
-                  : 'other-message'
-            }`}
-          >
-            <div className="message-header">
-              <strong>{message.senderName}</strong>
-              <span className="message-timestamp">
-                {formatTimestamp(message.createdAt)}
-              </span>
-            </div>
-            
-            <div className="message-content">
-              {message.text}
-              {selectedChannel && message.fileURL && (
-                <div className="file-attachment">
-                  <a href={message.fileURL} target="_blank" rel="noopener noreferrer">
-                    {message.fileName}
-                  </a>
-                </div>
-              )}
-            </div>
+        {messages.map(message => {
+          const isOwnMessage = message.senderId === currentUser.id;
+          const messageClass = selectedChannel 
+            ? 'channel-message' 
+            : isOwnMessage 
+              ? 'my-message' 
+              : 'other-message';
 
-            <div className="message-actions">
-              <div className="like-section">
-                <button onClick={() => handleLike(message.id, selectedChannel ? 
-                  `channels/${selectedChannel.id}/messages` : 
-                  `directMessages/${[currentUser.id, selectedUser.id].sort().join('_')}/messages`)}>
-                  <FontAwesomeIcon icon={faHeart} />
-                </button>
-                {message.likes && message.likes.map((like, index) => (
-                  <span
-                    key={index}
-                    onMouseEnter={() => fetchUserNames(message.likes)}
-                    title={message.likes.map(userId => userNames[userId]).join(', ')}
-                  >
-                    <FontAwesomeIcon icon={faHeart} style={{ color: 'red', marginLeft: '4px' }} />
-                  </span>
-                ))}
+          return (
+            <div key={message.id} className={`message ${messageClass}`}>
+              <div className="message-header">
+                <strong>{message.isAIPersona ? `${message.senderName} (AI)` : message.senderName}</strong>
+                <span className="message-timestamp">
+                  {formatTimestamp(message.createdAt)}
+                </span>
               </div>
-              {selectedChannel && (
-                <RepliesButton
+              
+              <div className="message-content">
+                {message.text}
+                {message.fileURL && (
+                  <div className="file-attachment">
+                    <a href={message.fileURL} target="_blank" rel="noopener noreferrer">
+                      {message.fileName}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="message-actions">
+                <div className="like-section">
+                  <button onClick={() => {
+                    const path = selectedChannel 
+                      ? `channels/${selectedChannel.id}/messages`
+                      : `directMessages/${[currentUser.id, selectedUser.id].sort().join('_')}/messages`;
+                    handleLike(message.id, path);
+                  }}>
+                    <FontAwesomeIcon icon={faHeart} />
+                  </button>
+                  {message.likes?.length > 0 && message.likes.map((like, index) => (
+                    <span
+                      key={index}
+                      onMouseEnter={() => fetchUserNames(message.likes)}
+                      title={message.likes.map(userId => userNames[userId]).join(', ')}
+                    >
+                      <FontAwesomeIcon icon={faHeart} style={{ color: 'red', marginLeft: '4px' }} />
+                    </span>
+                  ))}
+                </div>
+                {/* Only show reply options for channel messages */}
+                {selectedChannel && (
+                  <RepliesButton
+                    messageId={message.id}
+                    channelId={selectedChannel.id}
+                    toggleThread={toggleThread}
+                    toggleReplyInput={toggleReplyInput}
+                  />
+                )}
+              </div>
+
+              {/* Thread and reply components for channel messages */}
+              {selectedChannel && expandedThreads[message.id] && (
+                <Thread
                   messageId={message.id}
                   channelId={selectedChannel.id}
-                  toggleThread={toggleThread}
-                  toggleReplyInput={toggleReplyInput}
+                  onReply={handleReply}
                 />
               )}
+              {selectedChannel && showReplyInput[message.id] && (
+                <ReplyForm onReply={(text) => handleReply(message.id, text)} />
+              )}
             </div>
-
-            {expandedThreads[message.id] && selectedChannel && (
-              <Thread
-                messageId={message.id}
-                channelId={selectedChannel.id}
-                onReply={handleReply}
-              />
-            )}
-            {showReplyInput[message.id] && (
-              <ReplyForm onReply={(text) => handleReply(message.id, text)} />
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
       {selectedChannel?.id === 'ai-chatbot' && (
         <form onSubmit={handleSubmit} className="message-input-container">
