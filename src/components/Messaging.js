@@ -12,6 +12,9 @@ import { faPaperclip, faHeart } from '@fortawesome/free-solid-svg-icons';
 import Sidebar from './Sidebar.js';
 import AIChatbot from './AIChatbot.js';
 import MessageInput from './MessageInput.js';
+import { generatePersonaResponse } from '../services/personaService.js';
+// import { FishAudio } from 'fish-audio-sdk';
+// import FishAudio from 'fish-audio-sdk'; // If it's a default export
 
 
 const Messaging = ({ 
@@ -33,6 +36,7 @@ const Messaging = ({
   const [userNames, setUserNames] = useState({});
   const [channelFiles, setChannelFiles] = useState([]);
   const [currentStreamer, setCurrentStreamer] = useState(null);
+//   const fishAudio = new FishAudio();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -62,26 +66,32 @@ const Messaging = ({
         collection(firestore, `channels/${selectedChannel.id}/messages`),
         orderBy('createdAt')
       );
-      unsubscribe = onSnapshot(q, (snapshot) => {
+      unsubscribe = onSnapshot(q, async (snapshot) => {
         const messagesData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
         setMessages(messagesData);
+        
+        // Mark channel messages as read
+        await markMessagesAsRead(messagesData, `channels/${selectedChannel.id}/messages`);
       });
     } else if (selectedUser) {
+      const dmId = [currentUser.id, selectedUser.id].sort().join('_');
       const q = query(
-        collection(firestore, 'directMessages'),
+        collection(firestore, `directMessages/${dmId}/messages`),
         orderBy('createdAt')
       );
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        const messagesData = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(msg => 
-            (msg.senderId === currentUser.id && msg.recipientId === selectedUser.id) ||
-            (msg.senderId === selectedUser.id && msg.recipientId === currentUser.id)
-          );
+      
+      unsubscribe = onSnapshot(q, async (snapshot) => {
+        const messagesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
         setMessages(messagesData);
+        
+        // Mark direct messages as read
+        await markMessagesAsRead(messagesData, `directMessages/${dmId}/messages`);
       });
     }
 
@@ -96,31 +106,55 @@ const Messaging = ({
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    const messageData = {
-      text: newMessage,
-      createdAt: new Date(),
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      readBy: [currentUser.id],
-      likes: [],
-    };
-
     try {
-      if (file) {
-        const storage = getStorage();
-        const storageRef = ref(storage, `uploads/${file.name}`);
-        await uploadBytes(storageRef, file);
-        const fileURL = await getDownloadURL(storageRef);
-        messageData.fileURL = fileURL;
-        messageData.fileName = file.name;
-        setFile(null);
-      }
+      const messageData = {
+        text: newMessage,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        createdAt: new Date(),
+        likes: [],
+        readBy: [currentUser.id]
+      };
 
       if (selectedChannel) {
         await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages`), messageData);
       } else if (selectedUser) {
-        const messageId = [currentUser.id, selectedUser.id].sort().join('_');
-        await addDoc(collection(firestore, `directMessages/${messageId}/messages`), messageData);
+        const dmId = [currentUser.id, selectedUser.id].sort().join('_');
+        const dmRef = collection(firestore, `directMessages/${dmId}/messages`);
+        
+        // Send user's message
+        await addDoc(dmRef, messageData);
+
+        // Check current AI Persona status from Firestore
+        const recipientRef = doc(firestore, 'users', selectedUser.id);
+        const recipientDoc = await getDoc(recipientRef);
+        const recipientData = recipientDoc.data();
+        
+        // Only generate AI response if the feature is currently enabled
+        if (recipientData?.aiPersonaEnabled) {
+          console.log('Generating AI response for user:', selectedUser.id);
+          try {
+            const aiResponse = await generatePersonaResponse(selectedUser.id, newMessage);
+            
+            const aiMessageData = {
+              text: aiResponse,
+              senderId: selectedUser.id,
+              senderName: `${selectedUser.name} (AI)`,
+              createdAt: new Date(),
+              likes: [],
+              readBy: [],
+              isAIPersona: true,
+              recipientId: currentUser.id
+            };
+            
+            await addDoc(dmRef, aiMessageData);
+            console.log('AI response saved to database');
+          } catch (aiError) {
+            console.error('Error generating AI response:', aiError);
+          }
+        } else {
+          console.log('AI Persona is disabled for this user');
+        }
       }
 
       setNewMessage('');
@@ -173,15 +207,27 @@ const Messaging = ({
 
   const markMessagesAsRead = async (messages, path) => {
     const batch = writeBatch(firestore);
+    let hasUpdates = false;
+
     messages.forEach(message => {
-      if (!message.readBy.includes(currentUser.id)) {
+      if (!message.readBy?.includes(currentUser.id)) {
         const messageRef = doc(firestore, path, message.id);
         batch.update(messageRef, {
           readBy: arrayUnion(currentUser.id)
         });
+        hasUpdates = true;
       }
     });
-    await batch.commit();
+
+    // Only commit the batch if there are updates to make
+    if (hasUpdates) {
+      try {
+        await batch.commit();
+        console.log('Messages marked as read');
+      } catch (error) {
+        console.error('Error marking messages as read:', error);
+      }
+    }
   };
 
   const handleStatusChange = () => {
@@ -240,32 +286,17 @@ const Messaging = ({
   const handleKeyPress = async (e) => {
     if (e.key === 'Enter' && newMessage.trim()) {
       e.preventDefault();
-      
-      try {
-        const messageData = {
-          text: newMessage,
-          senderId: currentUser.id,
-          senderName: currentUser.name,
-          createdAt: new Date(),
-          likes: [],
-          readBy: [currentUser.id]
-        };
-
-        if (selectedChannel) {
-          messageData.channelId = selectedChannel.id;
-          await addDoc(collection(firestore, 'channels', selectedChannel.id, 'messages'), messageData);
-        } else if (selectedUser) {
-          // Handle direct message
-          messageData.recipientId = selectedUser.id;
-          await addDoc(collection(firestore, 'directMessages'), messageData);
-        }
-
-        setNewMessage('');
-      } catch (error) {
-        console.error('Error sending message:', error);
-      }
+      sendMessage(e);
     }
   };
+
+//   const readMessage = async (text) => {
+//     try {
+//       await FishAudio.speak(text);
+//     } catch (error) {
+//       console.error('Error with text-to-speech:', error);
+//     }
+//   };
 
   const renderContent = () => {
     if (selectedChannel && selectedChannel.name === 'ai-chatbot') {
@@ -290,6 +321,25 @@ const Messaging = ({
       />
     );
   };
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (selectedUser) {
+        try {
+          const userRef = doc(firestore, 'users', selectedUser.id);
+          const userDoc = await getDoc(userRef);
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            selectedUser.aiPersonaEnabled = userData.aiPersonaEnabled;
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, [selectedUser]);
 
   return (
     <div className="messaging-container">
