@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, arrayRemove, writeBatch, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, query, orderBy, doc, arrayUnion, arrayRemove, writeBatch, updateDoc, getDoc, getDocs, where } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { auth, firestore } from '../firebase.js';
 import CameraSharing from './CameraSharing.js';
@@ -17,6 +17,19 @@ import { generatePersonaResponse } from '../services/personaService.js';
 // import FishAudio from 'fish-audio-sdk'; // If it's a default export
 
 const storage = getStorage(); // Add this line
+
+const AVATAR_COLORS = [
+  '#FF6B6B', // coral red
+  '#4ECDC4', // turquoise
+  '#45B7D1', // sky blue
+  '#96CEB4', // sage green
+  '#FFEEAD', // cream yellow
+  '#D4A5A5', // dusty rose
+  '#9B59B6', // purple
+  '#3498DB', // blue
+  '#E67E22', // orange
+  '#27AE60'  // green
+];
 
 const Messaging = ({ 
   currentUser, 
@@ -37,6 +50,8 @@ const Messaging = ({
   const [userNames, setUserNames] = useState({});
   const [channelFiles, setChannelFiles] = useState([]);
   const [currentStreamer, setCurrentStreamer] = useState(null);
+  const [channelUsers, setChannelUsers] = useState([]);
+  const [selectedAvatar, setSelectedAvatar] = useState(null);
 //   const fishAudio = new FishAudio();
 
   useEffect(() => {
@@ -112,6 +127,34 @@ const Messaging = ({
       setChannelFiles(filesFromMessages);
     }
   }, [messages, selectedChannel]);
+
+  useEffect(() => {
+    const fetchChannelUsers = async () => {
+      if (selectedChannel) {
+        try {
+          const usersRef = collection(firestore, 'users');
+          const q = query(usersRef, where('joinedChannels', 'array-contains', {
+            id: selectedChannel.id,
+            name: selectedChannel.name
+          }));
+          
+          const querySnapshot = await getDocs(q);
+          const users = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().name,
+            email: doc.data().email,
+            profileImage: doc.data().profileImage
+          }));
+          console.log('Fetched users:', users);
+          setChannelUsers(users);
+        } catch (error) {
+          console.error('Error fetching channel users:', error);
+        }
+      }
+    };
+
+    fetchChannelUsers();
+  }, [selectedChannel]);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -343,6 +386,22 @@ const Messaging = ({
     fetchUserData();
   }, [selectedUser]);
 
+  const getInitials = (name, userId) => {
+    const initials = name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase();
+    
+    // Use userId to consistently get the same color for each user
+    const colorIndex = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % AVATAR_COLORS.length;
+    
+    return {
+      initials,
+      color: AVATAR_COLORS[colorIndex]
+    };
+  };
+
   return (
     <div className="messaging-container">
       <Sidebar
@@ -380,24 +439,64 @@ const Messaging = ({
               )}
             </div>
           </div>
+          
+          {selectedChannel && (
+            <div className="channel-users">
+              <div className="users-list">
+                {channelUsers.map(user => {
+                  const { initials, color } = getInitials(user.name, user.id);
+                  const tooltipContent = `${user.name}${user.email ? `\n${user.email}` : ''}`;
+                  const isSelected = selectedAvatar === user.id;
+                  
+                  return (
+                    <div 
+                      key={user.id} 
+                      className={`user-avatar ${isSelected ? 'selected' : ''}`}
+                      data-tooltip={tooltipContent}
+                      onClick={() => setSelectedAvatar(isSelected ? null : user.id)}
+                    >
+                      {user.profileImage ? (
+                        <img 
+                          src={user.profileImage} 
+                          alt={user.name}
+                          className="user-image"
+                        />
+                      ) : (
+                        <div 
+                          className="user-initials"
+                          style={{ backgroundColor: color }}
+                        >
+                          {initials}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
         
         {selectedChannel && (
-          <div className="files-section">
-            <h3>Files in this Channel:</h3>
-            <div className="files-list">
-              {channelFiles.map(file => (
-                <a 
-                  key={file.fileName}
-                  href={file.fileURL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="file-item"
-                >
-                  {file.fileName}
-                </a>
-              ))}
-            </div>
+          <div className="channel-footer">
+            {channelFiles.length > 0 && (
+              <div className="files-section">
+                <h3>Files in this Channel:</h3>
+                <div className="files-list">
+                  {channelFiles.map(file => (
+                    <a 
+                      key={file.fileName}
+                      href={file.fileURL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="file-item"
+                    >
+                      {file.fileName}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
         
