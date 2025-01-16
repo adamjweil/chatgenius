@@ -110,9 +110,21 @@
 
 .messages {
   flex: 1;
-  overflow-y: auto;
+  border-top: 1px solid rgba(224, 224, 224, 0.95);
+  /* overflow-y: auto; */
   padding: 20px;
   padding-bottom: 80px;
+  /* max-width: 900px; */
+  /* width: 100%; */
+}
+
+.messages-container {
+  /* width: 100%;
+  max-width: 1200px; */
+  /* overflow-x: hidden; */
+  /* max-width: calc(100% - 40px); */
+
+  
 }
 
 /* Only add large margin when viewing someone else's stream */
@@ -475,8 +487,8 @@
 /* Chat Header Styles */
 .chat-header {
   padding: 16px 20px;
-  border-bottom: none; /* Remove default border */
-  background-color: #fff;
+  border-bottom: none;
+  background-color: #ede8ff;
   z-index: 20;
 }
 
@@ -1602,6 +1614,7 @@
   padding: 1rem;
   border-bottom: 1px solid #e6e6e6;
   background-color: #f8f9fa;
+  height: 20px;
 }
 
 .clear-chat-button {
@@ -1790,6 +1803,136 @@ input:checked + .slider:before {
 .speak-button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.channel-footer {
+  /* border-top: 1px solid #eee; */
+}
+
+.files-section {
+  /* Remove the border-top since it's now on the container */
+  padding-bottom: 0.5rem;
+}
+
+/* Rest of the existing files-related CSS remains the same */
+
+.channel-users {
+  padding: 10px 20px;
+  /* border-bottom: 1px solid #eee; */
+  display: flex;
+  justify-content: center; /* Center the users list */
+}
+
+.users-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center; /* Center the avatars */
+  max-width: 80%; /* Prevent the list from stretching too wide */
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+.user-avatar:hover {
+  transform: scale(1.1);
+}
+
+/* Show tooltip on hover OR when selected */
+.user-avatar:hover::after,
+.user-avatar.selected::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -45px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: pre-line;
+  z-index: 1000;
+  min-width: max-content;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Show arrow on hover OR when selected */
+.user-avatar:hover::before,
+.user-avatar.selected::before {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* Add a subtle highlight for selected avatar */
+.user-avatar.selected {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 2px #007bff;
+}
+
+.user-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-initials {
+  width: 100%;
+  height: 100%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Update the hover tooltip */
+.user-avatar:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -45px; /* Increased to accommodate two lines */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: pre-line; /* This allows for line breaks in the tooltip */
+  z-index: 1000;
+  min-width: max-content; /* Ensures the tooltip doesn't wrap unnecessarily */
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Add a small arrow to the tooltip */
+.user-avatar:hover::before {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  pointer-events: none;
 }
 
 
