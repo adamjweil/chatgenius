@@ -44,7 +44,7 @@ export const indexMessage = async (message, metadata = {}) => {
       }
     }]);
 
-    console.log('Message indexed successfully with ID:', metadata.messageId);
+    // console.log('Message indexed successfully with ID:', metadata.messageId);
   } catch (error) {
     console.error('Error details:', {
       message: error.message,

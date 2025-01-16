@@ -12,7 +12,7 @@ import { clearPineconeIndex } from '../services/vectorService.js'; // Import her
 
 
 const Sidebar = ({ currentUser, selectedChannel, selectedUser, handleChannelSelect, handleUserSelect, handleLogout, status, setStatus }) => {
-  console.log('Sidebar - handleChannelSelect type:', typeof handleChannelSelect);
+  // console.log('Sidebar - handleChannelSelect type:', typeof handleChannelSelect);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [userData, setUserData] = useState({ status: '', photoURL: '' });

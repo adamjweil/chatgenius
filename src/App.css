@@ -1163,6 +1163,7 @@
 .files-section {
   padding: 10px 20px;
   background-color: #fff;
+  /* border-top: 1px solid #ddd; */
   border-bottom: 1px solid #ddd;
 }
 
@@ -1704,6 +1705,91 @@ input:checked + .slider:before {
   border-radius: 4px;
   font-size: 0.8em;
   color: #00838f;
+}
+
+/* Add these styles after your existing message styles */
+
+.ai-message {
+  align-self: flex-start;
+  text-align: left;
+  max-width: 50%;
+  margin-right: auto;
+  background-color: #f0f7ff !important;
+  border-left: 3px solid #0066cc !important;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.ai-header {
+  color: #0066cc;
+}
+
+.ai-badge {
+  background-color: #0066cc;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7em;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.ai-content {
+  color: #2c5282;
+}
+
+.message.ai-message:hover {
+  background-color: #e6f0ff !important;
+}
+
+/* Update existing message styles to ensure consistency */
+.message {
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+}
+
+.my-message {
+  background-color: #f0f0f0;
+  margin-left: auto;
+}
+
+.other-message {
+  background-color: #ffffff;
+  margin-right: auto;
+}
+
+.channel-message {
+  background-color: #ffffff;
+}
+
+.file-preview {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.speak-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.speak-button:hover {
+  color: #333;
+}
+
+.speak-button .speaking {
+  color: #007bff;
+}
+
+.speak-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 

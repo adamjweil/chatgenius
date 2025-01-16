@@ -16,6 +16,7 @@ import { generatePersonaResponse } from '../services/personaService.js';
 // import { FishAudio } from 'fish-audio-sdk';
 // import FishAudio from 'fish-audio-sdk'; // If it's a default export
 
+const storage = getStorage(); // Add this line
 
 const Messaging = ({ 
   currentUser, 
@@ -98,13 +99,34 @@ const Messaging = ({
     return () => unsubscribe();
   }, [selectedChannel, selectedUser, currentUser.id]);
 
+  useEffect(() => {
+    if (messages && selectedChannel) {
+      // Filter messages to get only those with files
+      const filesFromMessages = messages
+        .filter(message => message.fileURL && message.fileName)
+        .map(message => ({
+          fileName: message.fileName,
+          fileURL: message.fileURL
+        }));
+      
+      setChannelFiles(filesFromMessages);
+    }
+  }, [messages, selectedChannel]);
+
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+    console.log('Selected file:', selectedFile); // Debug log
   };
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    
+    // Ensure either message or file is present
+    if (!newMessage.trim() && !file) {
+      console.log('No message or file to send'); // Debug log
+      return; 
+    }
 
     try {
       const messageData = {
@@ -113,51 +135,31 @@ const Messaging = ({
         senderName: currentUser.name,
         createdAt: new Date(),
         likes: [],
-        readBy: [currentUser.id]
+        readBy: [currentUser.id],
+        fileURL: null,
+        fileName: null,
       };
+
+      if (file) {
+        const storageRef = ref(storage, `messages/${file.name}`);
+        await uploadBytes(storageRef, file);
+        const fileURL = await getDownloadURL(storageRef);
+
+        messageData.fileURL = fileURL;
+        messageData.fileName = file.name;
+      }
 
       if (selectedChannel) {
         await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages`), messageData);
       } else if (selectedUser) {
         const dmId = [currentUser.id, selectedUser.id].sort().join('_');
         const dmRef = collection(firestore, `directMessages/${dmId}/messages`);
-        
-        // Send user's message
         await addDoc(dmRef, messageData);
-
-        // Check current AI Persona status from Firestore
-        const recipientRef = doc(firestore, 'users', selectedUser.id);
-        const recipientDoc = await getDoc(recipientRef);
-        const recipientData = recipientDoc.data();
-        
-        // Only generate AI response if the feature is currently enabled
-        if (recipientData?.aiPersonaEnabled) {
-          console.log('Generating AI response for user:', selectedUser.id);
-          try {
-            const aiResponse = await generatePersonaResponse(selectedUser.id, newMessage);
-            
-            const aiMessageData = {
-              text: aiResponse,
-              senderId: selectedUser.id,
-              senderName: `${selectedUser.name} (AI)`,
-              createdAt: new Date(),
-              likes: [],
-              readBy: [],
-              isAIPersona: true,
-              recipientId: currentUser.id
-            };
-            
-            await addDoc(dmRef, aiMessageData);
-            console.log('AI response saved to database');
-          } catch (aiError) {
-            console.error('Error generating AI response:', aiError);
-          }
-        } else {
-          console.log('AI Persona is disabled for this user');
-        }
       }
 
+      // Reset input fields
       setNewMessage('');
+      setFile(null); // Reset the file input
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -420,6 +422,11 @@ const Messaging = ({
               />
               <button type="submit" className="send-button">Send</button>
             </div>
+            {file && (
+              <div className="file-preview">
+                <span>Selected file: {file.name}</span>
+              </div>
+            )}
           </form>
         ) : null}
       </div>
