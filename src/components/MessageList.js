@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faPaperPlane, faVolumeUp } from '@fortawesome/free-solid-svg-icons';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { firestore } from '../firebase.js';
+import axios from 'axios';
+
+console.log('API Key:', process.env.REACT_APP_ELEVEN_LABS_API_KEY);
 
 const MessageList = ({ 
   messages, 
@@ -22,6 +25,7 @@ const MessageList = ({
 }) => {
   const [currentStreamer, setCurrentStreamer] = useState(null);
   const [messageText, setMessageText] = useState('');
+  const [isPlaying, setIsPlaying] = useState({});
 
   // Listen for streamer changes
   useEffect(() => {
@@ -160,27 +164,86 @@ const MessageList = ({
     }
   };
 
+  const speakMessage = async (messageId, messageText) => {
+    // Debug log
+    console.log('Using API Key:', process.env.REACT_APP_ELEVEN_LABS_API_KEY);
+    
+    try {
+      if (!process.env.REACT_APP_ELEVEN_LABS_API_KEY) {
+        throw new Error('ElevenLabs API key is not configured');
+      }
+
+      setIsPlaying(prev => ({ ...prev, [messageId]: true }));
+      
+      const headers = {
+        'Accept': 'audio/mpeg',
+        'xi-api-key': process.env.REACT_APP_ELEVEN_LABS_API_KEY,
+        'Content-Type': 'application/json',
+      };
+
+      // Debug log
+      console.log('Request headers:', headers);
+
+      const response = await axios.post(
+        'https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM',
+        {
+          text: messageText,
+          model_id: 'eleven_monolingual_v1',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.5
+          }
+        },
+        {
+          headers,
+          responseType: 'blob'
+        }
+      );
+
+      const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      
+      audio.onended = () => {
+        setIsPlaying(prev => ({ ...prev, [messageId]: false }));
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error('Error with text-to-speech:', error);
+      setIsPlaying(prev => ({ ...prev, [messageId]: false }));
+    }
+  };
+
   return (
     <div className="messages-container">
       <div className={`messages ${currentStreamer && currentStreamer !== currentUser.id ? 'viewing-stream' : ''}`}>
         {messages.map(message => {
           const isOwnMessage = message.senderId === currentUser.id;
+          const isAIMessage = message.isAIPersona;
+          
           const messageClass = selectedChannel 
             ? 'channel-message' 
             : isOwnMessage 
               ? 'my-message' 
-              : 'other-message';
+              : isAIMessage 
+                ? 'ai-message'
+                : 'other-message';
 
           return (
             <div key={message.id} className={`message ${messageClass}`}>
-              <div className="message-header">
-                <strong>{message.isAIPersona ? `${message.senderName} (AI)` : message.senderName}</strong>
+              <div className={`message-header ${isAIMessage ? 'ai-header' : ''}`}>
+                <strong>
+                  {message.senderName}
+                  {isAIMessage && <span className="ai-badge">AI</span>}
+                </strong>
                 <span className="message-timestamp">
                   {formatTimestamp(message.createdAt)}
                 </span>
               </div>
               
-              <div className="message-content">
+              <div className={`message-content ${isAIMessage ? 'ai-content' : ''}`}>
                 {message.text}
                 {message.fileURL && (
                   <div className="file-attachment">
@@ -211,6 +274,16 @@ const MessageList = ({
                     </span>
                   ))}
                 </div>
+                <button 
+                  className="speak-button"
+                  onClick={() => speakMessage(message.id, message.text)}
+                  disabled={isPlaying[message.id]}
+                >
+                  <FontAwesomeIcon 
+                    icon={faVolumeUp} 
+                    className={isPlaying[message.id] ? 'speaking' : ''}
+                  />
+                </button>
                 {/* Only show reply options for channel messages */}
                 {selectedChannel && (
                   <RepliesButton

@@ -72,7 +72,7 @@ export const reindexAllMessages = async () => {
     for (const message of allMessages) {
       if (!message.isAI) { // Don't index AI responses
         try {
-          console.log('Indexing message:', message.text);
+          // console.log('Indexing message:', message.text);
           await indexMessage(message.text, {
             messageId: message.messageId,
             senderId: message.senderId,
@@ -80,7 +80,7 @@ export const reindexAllMessages = async () => {
             timestamp: formatTimestamp(message.createdAt), // Format timestamp
             channelId: message.channelId
           });
-          console.log('Successfully indexed message:', message.messageId);
+          // console.log('Successfully indexed message:', message.messageId);
         } catch (error) {
           console.error('Error indexing message:', message.messageId, error);
         }
@@ -117,7 +117,7 @@ export const startMessageIndexing = () => {
             
             if (!message.isAI) { // Don't index AI responses
               try {
-                console.log('Indexing new message:', message.text);
+                // console.log('Indexing new message:', message.text);
                 await indexMessage(message.text, {
                   messageId,
                   senderId: message.senderId,
@@ -125,7 +125,7 @@ export const startMessageIndexing = () => {
                   timestamp: formatTimestamp(message.createdAt),
                   channelId: channelDoc.id
                 });
-                console.log('Successfully indexed new message:', messageId);
+                // console.log('Successfully indexed new message:', messageId);
               } catch (error) {
                 console.error('Error indexing new message:', messageId, error);
               }
