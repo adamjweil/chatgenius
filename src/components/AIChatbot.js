@@ -98,11 +98,18 @@ const AIChatbot = ({ currentUser }) => {
         const relevantMessages = await queryVectorDB(text);
         console.log('Relevant messages found:', relevantMessages);
 
+        // Get the most relevant message if available
+        const mostRelevantMessage = relevantMessages && relevantMessages.length > 0 
+          ? relevantMessages.reduce((prev, current) => 
+              (prev.score > current.score) ? prev : current
+            )
+          : null;
+
         // Prepare context from relevant messages
         let context = "";
         if (relevantMessages && relevantMessages.length > 0) {
           context = relevantMessages
-            .filter(msg => msg.score > 0.5) // Only use reasonably relevant messages
+            .filter(msg => msg.score > 0.5)
             .map(msg => `Message from ${msg.metadata.senderName}: "${msg.metadata.text}"`)
             .join('\n');
         }
@@ -126,18 +133,23 @@ const AIChatbot = ({ currentUser }) => {
 
         const aiResponse = completion.choices[0].message.content;
 
-        // Add the AI's response to Firestore
+        // Add the AI's response to Firestore with the relevant message
         await addDoc(collection(firestore, 'channels/ai-chatbot/messages'), {
           text: aiResponse,
           senderId: 'ai-bot',
           senderName: 'AI Assistant',
           createdAt: new Date(),
           channelId: 'ai-chatbot',
-          isAI: true
+          isAI: true,
+          relevantMessage: mostRelevantMessage ? {
+            text: mostRelevantMessage.metadata.text,
+            senderName: mostRelevantMessage.metadata.senderName,
+            score: mostRelevantMessage.score
+          } : null
         });
+
       } catch (aiError) {
         console.error('Error getting AI response:', aiError);
-        // Handle error response
       }
     } catch (error) {
       console.error('Error in AI chat:', error);

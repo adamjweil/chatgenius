@@ -261,6 +261,20 @@ const MessageList = ({
                     </a>
                   </div>
                 )}
+                {message.isAI && message.relevantMessage && (
+                  <div className="relevant-message">
+                    <div className="relevant-message-header">
+                      Most Relevant Message:
+                      <span className="relevance-score">
+                        {Math.round(message.relevantMessage.score * 100)}% match
+                      </span>
+                    </div>
+                    <div className="relevant-message-content">
+                      <span className="relevant-message-sender">{message.relevantMessage.senderName}:</span>
+                      <span className="relevant-message-text">{message.relevantMessage.text}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="message-actions">
