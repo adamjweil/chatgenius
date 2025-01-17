@@ -3,7 +3,7 @@ import { collection, getDocs, doc, setDoc, query, orderBy, onSnapshot } from 'fi
 import { firestore } from '../firebase.js';
 import Modal from 'react-modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faCommentDots, faCaretDown, faCaretRight } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faCommentDots, faCaretDown, faCaretRight, faRobot } from '@fortawesome/free-solid-svg-icons';
 import '../App.css';
 
 const DirectMessages = ({ currentUser, onUserSelect, selectedUser, clearChannel }) => {
@@ -177,7 +177,16 @@ const DirectMessages = ({ currentUser, onUserSelect, selectedUser, clearChannel 
               style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             >
               <div className="user-info-container">
-                <span className="user-name">{user.name}</span>
+                <span className="user-name">
+                  {user.name}
+                  {user.aiAssistantEnabled && (
+                    <FontAwesomeIcon 
+                      icon={faRobot} 
+                      className="ai-indicator"
+                      title="AI Assistant Enabled"
+                    />
+                  )}
+                </span>
                 {user.status && <span className="user-status">[{user.status}]</span>}
               </div>
               {unreadCounts[user.id] > 0 && (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart, faPaperPlane, faVolumeUp } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faPaperPlane, faVolumeUp, faRobot } from '@fortawesome/free-solid-svg-icons';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { firestore } from '../firebase.js';
 import axios from 'axios';
@@ -234,12 +234,21 @@ const MessageList = ({
           return (
             <div key={message.id} className={`message ${messageClass}`}>
               <div className={`message-header ${isAIMessage ? 'ai-header' : ''}`}>
-                <strong>
-                  {message.senderName}
-                  {isAIMessage && <span className="ai-badge">AI</span>}
-                </strong>
-                <span className="message-timestamp">
-                  {formatTimestamp(message.createdAt)}
+                <div className="sender-info">
+                  {message.isAI && (
+                    <FontAwesomeIcon 
+                      icon={faRobot} 
+                      className="ai-icon" 
+                      title="AI Assistant Response"
+                    />
+                  )}
+                  <span className="sender-name">
+                    {message.senderName}
+                    {message.isAI && <span className="ai-indicator">AI</span>}
+                  </span>
+                </div>
+                <span className="timestamp">
+                  {message.createdAt?.toDate().toLocaleTimeString()}
                 </span>
               </div>
               
