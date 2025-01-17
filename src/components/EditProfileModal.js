@@ -6,6 +6,8 @@ import { indexUserMessages } from '../services/personaService.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 
+Modal.setAppElement('#root');
+
 const EditProfileModal = ({ isOpen, onClose, currentUser }) => {
   const [activeTab, setActiveTab] = useState('profile');
   const [name, setName] = useState('');
@@ -18,13 +20,13 @@ const EditProfileModal = ({ isOpen, onClose, currentUser }) => {
     total: 0,
     currentMessage: ''
   });
-  const [aiPersonaEnabled, setAiPersonaEnabled] = useState(currentUser?.aiPersonaEnabled || false);
+  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(currentUser?.aiAssistantEnabled || false);
 
   useEffect(() => {
     if (currentUser) {
       setName(currentUser.name || '');
       setPhotoURL(currentUser.photoURL || null);
-      setAiPersonaEnabled(currentUser.aiPersonaEnabled || false);
+      setAiAssistantEnabled(currentUser.aiAssistantEnabled || false);
     }
   }, [currentUser]);
 
@@ -40,7 +42,7 @@ const EditProfileModal = ({ isOpen, onClose, currentUser }) => {
       // Create update object, only including defined values
       const updateData = {
         name,
-        aiPersonaEnabled
+        aiAssistantEnabled
       };
 
       // Only include photoURL if it's not null
@@ -53,8 +55,8 @@ const EditProfileModal = ({ isOpen, onClose, currentUser }) => {
       console.log('User document updated successfully'); // Debug log
 
       // Handle AI Persona toggle (both enabling and disabling)
-      if (aiPersonaEnabled !== currentUser.aiPersonaEnabled) {
-        if (aiPersonaEnabled) {
+      if (aiAssistantEnabled !== currentUser.aiAssistantEnabled) {
+        if (aiAssistantEnabled) {
           // Enabling AI Persona
           console.log('Starting message indexing...'); // Debug log
           try {
@@ -72,14 +74,14 @@ const EditProfileModal = ({ isOpen, onClose, currentUser }) => {
           }
         } else {
           // Disabling AI Persona
-          console.log('Disabling AI Persona...'); // Debug log
+          console.log('Disabling AI Assistant...'); // Debug log
           try {
             // You might want to add a function to clean up indexed messages
             // await clearUserPersonaData(currentUser.id);
-            console.log('AI Persona disabled successfully');
+            console.log('AI Assistant disabled successfully');
           } catch (error) {
-            console.error('Error disabling AI Persona:', error);
-            setError('Failed to disable AI Persona. Please try again.');
+            console.error('Error disabling AI Assistant:', error);
+            setError('Failed to disable AI Assistant. Please try again.');
             return;
           }
         }
@@ -88,7 +90,7 @@ const EditProfileModal = ({ isOpen, onClose, currentUser }) => {
       // Update local user object
       currentUser.name = name;
       currentUser.photoURL = photoURL;
-      currentUser.aiPersonaEnabled = aiPersonaEnabled;
+      currentUser.aiAssistantEnabled = aiAssistantEnabled;
 
       onClose();
     } catch (error) {
@@ -193,18 +195,18 @@ const EditProfileModal = ({ isOpen, onClose, currentUser }) => {
       {activeTab === 'ai-avatar' && (
         <div className="ai-settings">
           <div className="toggle-group">
-            <label htmlFor="aiPersona" className="modal-label">
-              Enable AI Persona
+            <label htmlFor="aiAssistant" className="modal-label">
+              Enable AI Assistant
               <span className="feature-description">
                 Allow an AI to respond to direct messages on your behalf, using your message history to mimic your style
               </span>
             </label>
             <label className="switch">
               <input
-                id="aiPersona"
+                id="aiAssistant"
                 type="checkbox"
-                checked={aiPersonaEnabled}
-                onChange={(e) => setAiPersonaEnabled(e.target.checked)}
+                checked={aiAssistantEnabled}
+                onChange={(e) => setAiAssistantEnabled(e.target.checked)}
                 disabled={indexingProgress.isIndexing}
               />
               <span className="slider round"></span>

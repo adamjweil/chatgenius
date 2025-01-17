@@ -13,6 +13,7 @@ import Sidebar from './Sidebar.js';
 import AIChatbot from './AIChatbot.js';
 import MessageInput from './MessageInput.js';
 import { generatePersonaResponse } from '../services/personaService.js';
+import DocumentQAModal from './DocumentQAModal.js';
 // import { FishAudio } from 'fish-audio-sdk';
 // import FishAudio from 'fish-audio-sdk'; // If it's a default export
 
@@ -52,6 +53,7 @@ const Messaging = ({
   const [currentStreamer, setCurrentStreamer] = useState(null);
   const [channelUsers, setChannelUsers] = useState([]);
   const [selectedAvatar, setSelectedAvatar] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
 //   const fishAudio = new FishAudio();
 
   useEffect(() => {
@@ -167,7 +169,7 @@ const Messaging = ({
     
     // Ensure either message or file is present
     if (!newMessage.trim() && !file) {
-      console.log('No message or file to send'); // Debug log
+      console.log('No message or file to send');
       return; 
     }
 
@@ -192,17 +194,47 @@ const Messaging = ({
         messageData.fileName = file.name;
       }
 
-      if (selectedChannel) {
-        await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages`), messageData);
-      } else if (selectedUser) {
+      // Handle direct message with AI response if needed
+      if (selectedUser) {
         const dmId = [currentUser.id, selectedUser.id].sort().join('_');
         const dmRef = collection(firestore, `directMessages/${dmId}/messages`);
         await addDoc(dmRef, messageData);
+
+        // Check if recipient has AI assistant enabled
+        console.log('Selected user:', selectedUser); // Debug log
+        console.log('AI Assistant status:', selectedUser.aiAssistantEnabled); // Debug log
+        
+        if (selectedUser.aiAssistantEnabled) {
+          try {
+            console.log('Generating AI response for user:', selectedUser.id);
+            const aiResponse = await generatePersonaResponse(selectedUser.id, newMessage);
+            
+            if (aiResponse) {
+              // Add AI response to the conversation
+              const aiMessageData = {
+                text: aiResponse,
+                senderId: selectedUser.id,
+                senderName: selectedUser.name,
+                createdAt: new Date(),
+                likes: [],
+                readBy: [selectedUser.id],
+                isAI: true
+              };
+              
+              await addDoc(dmRef, aiMessageData);
+            }
+          } catch (aiError) {
+            console.error('Error generating AI response:', aiError);
+          }
+        }
+      } else if (selectedChannel) {
+        // Regular channel message
+        await addDoc(collection(firestore, `channels/${selectedChannel.id}/messages`), messageData);
       }
 
       // Reset input fields
       setNewMessage('');
-      setFile(null); // Reset the file input
+      setFile(null);
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -375,7 +407,7 @@ const Messaging = ({
           const userDoc = await getDoc(userRef);
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            selectedUser.aiPersonaEnabled = userData.aiPersonaEnabled;
+            selectedUser.aiAssistantEnabled = userData.aiAssistantEnabled;
           }
         } catch (error) {
           console.error('Error fetching user data:', error);
@@ -484,18 +516,33 @@ const Messaging = ({
                 <h3>Files in this Channel:</h3>
                 <div className="files-list">
                   {channelFiles.map(file => (
-                    <a 
-                      key={file.fileName}
-                      href={file.fileURL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="file-item"
-                    >
-                      {file.fileName}
-                    </a>
+                    <div key={file.fileName} className="file-item-container">
+                      <a 
+                        href={file.fileURL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="file-item"
+                      >
+                        {file.fileName}
+                      </a>
+                      <button 
+                        onClick={() => setSelectedFile(file)}
+                        className="ask-file-button"
+                      >
+                        Ask Question
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
+            )}
+            {selectedFile && (
+              <DocumentQAModal
+                file={selectedFile}
+                isOpen={!!selectedFile}
+                onClose={() => setSelectedFile(null)}
+                currentUser={currentUser}
+              />
             )}
           </div>
         )}

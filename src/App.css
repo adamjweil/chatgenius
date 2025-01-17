@@ -1723,37 +1723,42 @@ input:checked + .slider:before {
 /* Add these styles after your existing message styles */
 
 .ai-message {
-  align-self: flex-start;
-  text-align: left;
-  max-width: 50%;
-  margin-right: auto;
-  background-color: #f0f7ff !important;
-  border-left: 3px solid #0066cc !important;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  background-color: #f0f4ff !important; /* Light blue background for AI messages */
+  border-left: 3px solid #4a90e2 !important; /* Blue accent line */
 }
 
-.ai-header {
-  color: #0066cc;
+.ai-icon {
+  color: #4a90e2;
+  margin-right: 8px;
+  font-size: 14px;
 }
 
-.ai-badge {
-  background-color: #0066cc;
-  color: white;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.7em;
-  margin-left: 8px;
-  vertical-align: middle;
+.sender-info {
+  display: flex;
+  align-items: center;
 }
 
-.ai-content {
-  color: #2c5282;
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 0.9em;
 }
 
-.message.ai-message:hover {
-  background-color: #e6f0ff !important;
+.sender-name {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.timestamp {
+  color: #666;
+  font-size: 0.8em;
+}
+
+.message-content {
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 /* Update existing message styles to ensure consistency */
@@ -1933,6 +1938,90 @@ input:checked + .slider:before {
   border-bottom-color: rgba(0, 0, 0, 0.8);
   z-index: 1000;
   pointer-events: none;
+}
+
+.file-item-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.ask-file-button {
+  padding: 4px 8px;
+  background: #6b46c1;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.ask-file-button:hover {
+  background: #553c9a;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.question-section {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.question-input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.answer-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.ai-indicator {
+  font-size: 12px;
+  margin-left: 6px;
+  color: #6b46c1;
+  opacity: 0.8;
+}
+
+.ai-indicator:hover {
+  opacity: 1;
+}
+
+.user-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 
