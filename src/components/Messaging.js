@@ -453,6 +453,7 @@ const Messaging = ({
                   currentUser={currentUser} 
                   selectedChannel={selectedChannel}
                   setCurrentStreamer={setCurrentStreamer}
+                  currentStreamer={currentStreamer}
                 />
               )}
             </div>
@@ -465,9 +466,27 @@ const Messaging = ({
             </h2>
             <div className="header-right">
               {selectedChannel && (
-                <button onClick={leaveChannel} className="leave-channel-button">
-                  Leave Channel
-                </button>
+                <>
+                  {currentStreamer && (
+                    <button 
+                      onClick={() => {
+                        const channelRef = doc(firestore, 'channels', selectedChannel.id);
+                        updateDoc(channelRef, { 
+                          currentStreamer: null,
+                          offer: null,
+                          answer: null,
+                          iceCandidate: null
+                        });
+                      }} 
+                      className="stop-stream-button"
+                    >
+                      Stop Stream
+                    </button>
+                  )}
+                  <button onClick={leaveChannel} className="leave-channel-button">
+                    Leave Channel
+                  </button>
+                </>
               )}
             </div>
           </div>
