@@ -1,4 +1,4 @@
-# ChatGenius
+# Chat-Genius
 
 ChatGenius is a sophisticated real-time chat application that combines modern messaging capabilities with AI-powered features. Built with React and Firebase, it offers a seamless communication experience with intelligent features like AI assistants and document analysis.
 
