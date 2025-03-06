@@ -14,6 +14,10 @@ ChatGenius is a sophisticated real-time chat application that combines modern me
 [![Watch: Part 2](https://img.shields.io/badge/Watch-Part_2-FF6000?style=for-the-badge&logo=loom)](https://www.loom.com/share/eb4c829f84e44844a1c1d54ec0e77f8f?sid=3515e395-1b24-485a-9411-2b473c4f07ac)
 *Click to watch Part 2 (Application Demo)*
 
+### Part 3
+[![Watch: Part 3](https://img.shields.io/badge/Watch-Part_3-FF6000?style=for-the-badge&logo=loom)](https://www.loom.com/share/4b8cba9056c9434da87c7c0d0a1066cb)
+*Click to watch Part 3 (Additional Features)*
+
 ## ✨ Key Features
 
 ### 💬 Messaging System
