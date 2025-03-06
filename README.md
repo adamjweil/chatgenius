@@ -6,11 +6,13 @@ ChatGenius is a sophisticated real-time chat application that combines modern me
 
 ## 🎬 Demo Videos
 
-### Application Overview
-[![Watch: Application Overview](https://img.shields.io/badge/Watch-Application_Overview-FF6000?style=for-the-badge&logo=loom)](https://www.loom.com/share/eb4c829f84e44844a1c1d54ec0e77f8f?sid=3515e395-1b24-485a-9411-2b473c4f07ac)
+### Part 1
+[![Watch: Part 1](https://img.shields.io/badge/Watch-Part_1-FF6000?style=for-the-badge&logo=loom)](https://www.loom.com/share/12d19c557d7349298eabca7e285f4026?sid=8afd95c9-cc7b-46c0-87aa-81d35dd1e404)
+*Click to watch Part 1 (Technical Overview)*
 
-### Technical Walkthrough
-[![Watch: Technical Walkthrough](https://img.shields.io/badge/Watch-Technical_Walkthrough-FF6000?style=for-the-badge&logo=loom)](https://www.loom.com/share/12d19c557d7349298eabca7e285f4026?sid=8afd95c9-cc7b-46c0-87aa-81d35dd1e404)
+### Part 2
+[![Watch: Part 2](https://img.shields.io/badge/Watch-Part_2-FF6000?style=for-the-badge&logo=loom)](https://www.loom.com/share/eb4c829f84e44844a1c1d54ec0e77f8f?sid=3515e395-1b24-485a-9411-2b473c4f07ac)
+*Click to watch Part 2 (Application Demo)*
 
 ## ✨ Key Features
 
