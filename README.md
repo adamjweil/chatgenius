@@ -4,6 +4,14 @@ ChatGenius is a sophisticated real-time chat application that combines modern me
 
 ![ChatGenius Interface](public/chatgenius-screenshot.png)
 
+## 🎬 Demo Videos
+
+### Application Overview
+[![ChatGenius Overview](https://cdn.loom.com/sessions/thumbnails/eb4c829f84e44844a1c1d54ec0e77f8f-with-play.gif)](https://www.loom.com/share/eb4c829f84e44844a1c1d54ec0e77f8f?sid=3515e395-1b24-485a-9411-2b473c4f07ac)
+
+### Technical Walkthrough
+[![ChatGenius Technical Walkthrough](https://cdn.loom.com/sessions/thumbnails/12d19c557d7349298eabca7e285f4026-with-play.gif)](https://www.loom.com/share/12d19c557d7349298eabca7e285f4026?sid=8afd95c9-cc7b-46c0-87aa-81d35dd1e404)
+
 ## ✨ Key Features
 
 ### 💬 Messaging System
